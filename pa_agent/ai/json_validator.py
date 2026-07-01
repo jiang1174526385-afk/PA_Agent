@@ -349,27 +349,82 @@ def _inject_stage1_missing_tail(text: str) -> str:
     return _balance_json_brackets(tail)
 
 
+def _repair_unclosed_string_before_brace(text: str) -> str:
+    """Close strings broken by a raw newline followed by ``}`` / ``]``.
+
+    Models sometimes omit the closing quote in long ``summary`` / ``reasoning``
+    fields, e.g. ``"summary": "text\\n}\\n  },"`` → insert ``"`` before ``}``.
+    """
+    out: list[str] = []
+    in_string = False
+    escape = False
+    i = 0
+    n = len(text)
+
+    while i < n:
+        ch = text[i]
+        if not in_string:
+            if ch == '"':
+                in_string = True
+            out.append(ch)
+            i += 1
+            continue
+        if escape:
+            escape = False
+            out.append(ch)
+            i += 1
+            continue
+        if ch == "\\":
+            escape = True
+            out.append(ch)
+            i += 1
+            continue
+        if ch == '"':
+            in_string = False
+            out.append(ch)
+            i += 1
+            continue
+        if ch == "\n":
+            j = i + 1
+            while j < n and text[j] in " \t\r":
+                j += 1
+            if j < n and text[j] in "}]":
+                out.append('"')
+                in_string = False
+                continue
+        out.append(ch)
+        i += 1
+    return "".join(out)
+
+
 def _try_repair_json_syntax(
     text: str,
     stage: Literal["stage1", "stage2"],
     *,
     allow_tail_inject: bool = False,
 ) -> str | None:
-    """Return repaired JSON text when truncation caused a syntax error, else None."""
+    """Return repaired JSON text when truncation/syntax slip caused parse failure."""
     if not text.strip().startswith("{"):
         return None
 
-    candidate = text.rstrip()
+    bases: list[str] = [text.rstrip()]
     if stage == "stage1" and allow_tail_inject:
-        candidate = _inject_stage1_missing_tail(candidate)
-    candidate = _balance_json_brackets(candidate)
-    if candidate == text.rstrip():
-        return None
-    try:
-        json.loads(candidate)
-    except json.JSONDecodeError:
-        return None
-    return candidate
+        bases.append(_inject_stage1_missing_tail(bases[0]))
+
+    seen: set[str] = set()
+    for base in bases:
+        for variant in (base, _repair_unclosed_string_before_brace(base)):
+            candidate = _balance_json_brackets(variant.rstrip())
+            if candidate in seen:
+                continue
+            seen.add(candidate)
+            try:
+                json.loads(candidate)
+            except json.JSONDecodeError:
+                continue
+            if candidate != text.rstrip():
+                return candidate
+    return None
 
 
 # ── JsonValidator ─────────────────────────────────────────────────────────────
@@ -497,15 +552,12 @@ class JsonValidator:
                     parse_exc = exc2
             if obj is None and parse_exc is not None:
                 exc = parse_exc
-                # Stage 2: fail fast on syntax errors (no silent truncation repair).
                 allow_inject = (
                     stage == "stage1"
                     and not getattr(self._validation, "disable_truncation_repair", True)
                 )
-                repaired = (
-                    _try_repair_json_syntax(stripped, stage, allow_tail_inject=allow_inject)
-                    if stage == "stage1"
-                    else None
+                repaired = _try_repair_json_syntax(
+                    stripped, stage, allow_tail_inject=allow_inject
                 )
                 if repaired is not None:
                     try:

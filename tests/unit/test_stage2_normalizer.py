@@ -832,6 +832,110 @@ def test_repair_next_bar_yinxian_singular_probability() -> None:
     assert nb["probabilities"]["bearish"] == 60
 
 
+def test_prediction_guard_forbids_long_when_next_cycle_bearish() -> None:
+    obj = {
+        "decision": {
+            "order_type": "限价单",
+            "order_direction": "做多",
+            "entry_price": 4015.365,
+            "take_profit_price": 4022.486,
+            "take_profit_price_2": 4034.234,
+            "stop_loss_price": 4009.472,
+            "reasoning": "test",
+            "diagnosis_confidence": 64,
+            "diagnosis_confidence_reasoning": "t",
+            "trade_confidence": 52,
+            "trade_confidence_reasoning": "t",
+            "estimated_win_rate": 52,
+            "estimated_win_rate_reasoning": "t",
+            "key_factors": [],
+            "watch_points": [],
+            "risk_assessment": "t",
+            "invalidation_condition": "t",
+        },
+        "diagnosis_summary": {
+            "cycle_position": "trending_tr",
+            "direction": "neutral",
+            "key_signals": [],
+        },
+        "decision_trace": [],
+        "terminal": {"node_id": "11.3", "outcome": "trade", "label": "t"},
+        "next_cycle_prediction": {
+            "cycle": "broad_channel",
+            "direction": "bearish",
+            "probabilities": {
+                "spike": 5,
+                "micro_channel": 5,
+                "tight_channel": 8,
+                "normal_channel": 12,
+                "broad_channel": 30,
+                "trending_tr": 20,
+                "trading_range": 15,
+                "extreme_tr": 5,
+            },
+            "unpredictable": False,
+            "reasoning": "x",
+            "features_used": ["stage1_diagnosis"],
+        },
+    }
+    out = normalize_stage2(obj)
+    assert out["decision"]["order_type"] == "不下单"
+    assert out["terminal"]["outcome"] == "wait"
+    assert "禁止做多" in (out["decision"].get("reasoning") or "")
+
+
+def test_prediction_guard_forbids_short_when_next_cycle_bullish() -> None:
+    obj = {
+        "decision": {
+            "order_type": "限价单",
+            "order_direction": "做空",
+            "entry_price": 4022.486,
+            "take_profit_price": 4015.365,
+            "take_profit_price_2": 4009.473,
+            "stop_loss_price": 4034.234,
+            "reasoning": "test",
+            "diagnosis_confidence": 64,
+            "diagnosis_confidence_reasoning": "t",
+            "trade_confidence": 52,
+            "trade_confidence_reasoning": "t",
+            "estimated_win_rate": 52,
+            "estimated_win_rate_reasoning": "t",
+            "key_factors": [],
+            "watch_points": [],
+            "risk_assessment": "t",
+            "invalidation_condition": "t",
+        },
+        "diagnosis_summary": {
+            "cycle_position": "trending_tr",
+            "direction": "neutral",
+            "key_signals": [],
+        },
+        "decision_trace": [],
+        "terminal": {"node_id": "11.3", "outcome": "trade", "label": "t"},
+        "next_cycle_prediction": {
+            "cycle": "broad_channel",
+            "direction": "bullish",
+            "probabilities": {
+                "spike": 5,
+                "micro_channel": 5,
+                "tight_channel": 8,
+                "normal_channel": 12,
+                "broad_channel": 30,
+                "trending_tr": 20,
+                "trading_range": 15,
+                "extreme_tr": 5,
+            },
+            "unpredictable": False,
+            "reasoning": "x",
+            "features_used": ["stage1_diagnosis"],
+        },
+    }
+    out = normalize_stage2(obj)
+    assert out["decision"]["order_type"] == "不下单"
+    assert out["terminal"]["outcome"] == "wait"
+    assert "禁止做空" in (out["decision"].get("reasoning") or "")
+
+
 def test_validator_injects_next_bar_when_feature_disabled() -> None:
     """skip_next_bar=True must not skip schema-required injection during validate()."""
     payload = {

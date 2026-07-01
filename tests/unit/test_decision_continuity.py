@@ -1,11 +1,14 @@
 """Tests for decision continuity (flip cooldown, neutral+AIS, guard)."""
 from __future__ import annotations
 
+from datetime import datetime, timezone
+
 from pa_agent.ai.decision_continuity import (
     apply_continuity_guard,
     assess_limit_order_triggered,
     assess_plan_invalidation,
     audit_relation_fields,
+    bars_elapsed_between,
     build_continuity_context,
     continuity_violation_reason,
     entries_same_structure,
@@ -15,7 +18,19 @@ from pa_agent.ai.decision_continuity import (
 from pa_agent.data.base import KlineBar, KlineFrame, IndicatorBundle
 
 
-def _frame(*, close: float = 4193.0, high: float = 4194.0, low: float = 4190.0) -> KlineFrame:
+def _ms(iso: str) -> int:
+    # Treat local ISO as UTC in tests; only deltas matter.
+    dt = datetime.strptime(iso, "%Y-%m-%d %H:%M:%S").replace(tzinfo=timezone.utc)
+    return int(dt.timestamp() * 1000)
+
+
+def _frame(
+    *,
+    close: float = 4193.0,
+    high: float = 4194.0,
+    low: float = 4190.0,
+    snapshot_ts_local_ms: int | None = None,
+) -> KlineFrame:
     bars = (
         KlineBar(
             seq=1,
@@ -33,7 +48,11 @@ def _frame(*, close: float = 4193.0, high: float = 4194.0, low: float = 4190.0) 
         timeframe="5m",
         bars=bars,
         indicators=IndicatorBundle(ema20=(4195.0,), atr14=(2.0,)),
-        snapshot_ts_local_ms=1_700_000_300_000,
+        snapshot_ts_local_ms=(
+            int(snapshot_ts_local_ms)
+            if snapshot_ts_local_ms is not None
+            else _ms("2026-06-30 14:25:00")
+        ),
     )
 
 
@@ -230,3 +249,108 @@ def test_audit_relation_flip_label():
     audit = audit_relation_fields(prev, curr, frame=_frame(), cooldown_bars=3)
     assert audit["prev_plan_relation"] == "反手"
     assert order_direction_sign("做空") == -1
+
+
+def test_bars_elapsed_between_parses_iso_t_separator():
+    prev = "2026-06-30T15:15:00.651"
+    curr = _ms("2026-06-30 15:30:01")
+    assert bars_elapsed_between(prev, curr, "15m") == 1
+
+
+def test_build_continuity_context_auto_cancels_after_3_bars_unfilled_limit():
+    prev_time = "2026-06-30 14:00:00"
+    frame = _frame(snapshot_ts_local_ms=_ms("2026-06-30 14:25:00"))  # 5m * 5 bars
+    ctx = build_continuity_context(
+        frame=frame,
+        stage1_json={"direction": "bullish", "cycle_position": "trending_tr"},
+        previous_record={
+            "meta": {"timestamp_local_iso": prev_time},
+            "stage1_diagnosis": {"direction": "bullish", "cycle_position": "trending_tr"},
+            "stage2_decision": {
+                "decision": {
+                    "order_direction": "做多",
+                    "order_type": "限价单",
+                    "entry_price": 5000.0,  # not touched by _frame() low
+                    "stop_loss_price": 4980.0,
+                    "take_profit_price": 5050.0,
+                }
+            },
+        },
+    )
+    assert ctx["bars_since"] > 3
+    assert ctx["limit_triggered"] is False
+    assert ctx["invalidated"] is True
+    assert "自动取消" in (ctx["invalidation_reason"] or "")
+
+
+def test_build_continuity_context_auto_cancels_on_cycle_change_unfilled_limit():
+    frame = _frame(snapshot_ts_local_ms=_ms("2026-06-30 14:05:00"))
+    ctx = build_continuity_context(
+        frame=frame,
+        stage1_json={"direction": "bullish", "cycle_position": "trading_range"},
+        previous_record={
+            "meta": {"timestamp_local_iso": "2026-06-30 14:00:00"},
+            "stage1_diagnosis": {"direction": "bullish", "cycle_position": "trending_tr"},
+            "stage2_decision": {
+                "decision": {
+                    "order_direction": "做多",
+                    "order_type": "限价单",
+                    "entry_price": 5000.0,
+                    "stop_loss_price": 4980.0,
+                    "take_profit_price": 5050.0,
+                }
+            },
+        },
+    )
+    assert ctx["limit_triggered"] is False
+    assert ctx["invalidated"] is True
+    assert "周期" in (ctx["invalidation_reason"] or "")
+
+
+def test_build_continuity_context_auto_cancels_on_direction_change_unfilled_limit():
+    frame = _frame(snapshot_ts_local_ms=_ms("2026-06-30 15:30:01"))
+    ctx = build_continuity_context(
+        frame=frame,
+        stage1_json={"direction": "bullish", "cycle_position": "trending_tr"},
+        previous_record={
+            "meta": {"timestamp_local_iso": "2026-06-30T15:15:00.651"},
+            "stage1_diagnosis": {"direction": "neutral", "cycle_position": "trending_tr"},
+            "stage2_decision": {
+                "decision": {
+                    "order_direction": "做多",
+                    "order_type": "限价单",
+                    "entry_price": 7459.05,
+                    "stop_loss_price": 7454.13,
+                    "take_profit_price": 7466.42,
+                }
+            },
+        },
+    )
+    assert ctx["limit_triggered"] is False
+    assert ctx["invalidated"] is True
+    assert "趋势方向" in (ctx["invalidation_reason"] or "")
+
+
+def test_build_continuity_context_does_not_auto_cancel_when_limit_already_triggered():
+    # entry=4192 is touched by _frame() low=4190
+    frame = _frame(snapshot_ts_local_ms=_ms("2026-06-30 14:25:00"))
+    ctx = build_continuity_context(
+        frame=frame,
+        stage1_json={"direction": "bullish", "cycle_position": "trending_tr"},
+        previous_record={
+            "meta": {"timestamp_local_iso": "2026-06-30 14:00:00"},
+            "stage1_diagnosis": {"direction": "bullish", "cycle_position": "trending_tr"},
+            "stage2_decision": {
+                "decision": {
+                    "order_direction": "做多",
+                    "order_type": "限价单",
+                    "entry_price": 4192.0,
+                    "stop_loss_price": 4185.0,
+                    "take_profit_price": 4200.0,
+                }
+            },
+        },
+    )
+    assert ctx["limit_triggered"] is True
+    # Triggered means we should not auto-cancel under the "unfilled" rule.
+    assert ctx["invalidated"] is False

@@ -26,6 +26,7 @@ from PyQt6.QtWidgets import (
 )
 from PyQt6.QtCore import Qt
 
+from pa_agent.ai.response_extract import reasoning_from_response
 from pa_agent.app_context import AppContext
 from pa_agent.gui.validation_debug_dialog import show_validation_debug_dialog
 
@@ -3266,6 +3267,7 @@ class MainWindow(QMainWindow):
 
                 from pa_agent.ai.cycle_enums import (
                     format_cycle_with_direction,
+                    format_trend_label,
                 )
 
                 # Current market cycle from diagnosis_summary
@@ -3286,14 +3288,8 @@ class MainWindow(QMainWindow):
                     if cycle_key:
                         next_cycle_zh = format_cycle_with_direction(cycle_key, ncp.get("direction"))
 
-                # Current trend from diagnosis_summary.direction
-                _trend_map = {
-                    "bullish": "上涨",
-                    "bearish": "下跌",
-                    "neutral": "震荡",
-                }
-                cur_trend = diag.get("direction") or ""
-                cur_trend_zh = _trend_map.get(cur_trend, cur_trend or "—")
+                # Current trend: align with decision panel (range cycles → 震荡偏空/偏多).
+                cur_trend_zh = format_trend_label(diag.get("direction"), cur_cycle)
 
                 metrics: dict[str, str] = {
                     "当前趋势": cur_trend_zh,
@@ -3675,12 +3671,9 @@ class MainWindow(QMainWindow):
             s1_raw = getattr(record, "stage1_response", {}) or {}
             if s1_diag:
                 s1_content = _json.dumps(s1_diag, ensure_ascii=False, indent=2)
-                s1_reasoning = ""
-                if isinstance(s1_raw, dict):
-                    choices = s1_raw.get("choices", [])
-                    if choices:
-                        msg = choices[0].get("message", {})
-                        s1_reasoning = msg.get("reasoning_content", "") or ""
+                s1_reasoning = reasoning_from_response(
+                    s1_raw if isinstance(s1_raw, dict) else None
+                )
                 panel.show_stage_result("阶段一：市场诊断", s1_content, s1_reasoning)
             # Push per-stage cache hit rate to stats label
             if isinstance(s1_raw, dict):
@@ -3693,12 +3686,9 @@ class MainWindow(QMainWindow):
             s2_raw = getattr(record, "stage2_response", {}) or {}
             if s2_decision:
                 s2_content = _json.dumps(s2_decision, ensure_ascii=False, indent=2)
-                s2_reasoning = ""
-                if isinstance(s2_raw, dict):
-                    choices = s2_raw.get("choices", [])
-                    if choices:
-                        msg = choices[0].get("message", {})
-                        s2_reasoning = msg.get("reasoning_content", "") or ""
+                s2_reasoning = reasoning_from_response(
+                    s2_raw if isinstance(s2_raw, dict) else None
+                )
                 panel.show_stage_result("阶段二：交易决策", s2_content, s2_reasoning)
             if isinstance(s2_raw, dict):
                 s2_usage = s2_raw.get("usage") or {}

@@ -154,6 +154,7 @@ _GENERIC_ANSWER: dict[str, str] = {
     "尚未确认": "等待",
     "未确认": "等待",
     "不确定": "中性",
+    "中立": "中性",
 }
 
 _BAR_RANGE_ALIASES = frozenset({"全局", "全图", "整体", "全部", "all"})

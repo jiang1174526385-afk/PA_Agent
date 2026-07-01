@@ -13,6 +13,8 @@ _TRADE_RECORDS_DIR = Path("trade_records")
 
 # Default: no opposite-direction plan at the same structure within N closed bars.
 DEFAULT_STRUCTURE_FLIP_COOLDOWN_BARS = 3
+# Resting limit plans auto-expire after this many closed bars without a fill.
+DEFAULT_MAX_PENDING_LIMIT_BARS = 3
 _STRUCTURE_TOLERANCE_TICKS = 3
 
 _REL_SAME = "same_direction"
@@ -93,6 +95,27 @@ def _timeframe_minutes(timeframe: str) -> int:
     return 5
 
 
+def _parse_local_iso_ms(iso: str | None) -> int | None:
+    """Parse record timestamps (space or ``T`` separator, optional fractional seconds)."""
+    if not iso:
+        return None
+    raw = str(iso).strip()
+    if not raw:
+        return None
+    if raw.endswith("Z"):
+        raw = raw[:-1] + "+00:00"
+    try:
+        return int(datetime.fromisoformat(raw).timestamp() * 1000)
+    except (TypeError, ValueError, OSError):
+        pass
+    for fmt in ("%Y-%m-%dT%H:%M:%S", "%Y-%m-%d %H:%M:%S"):
+        try:
+            return int(datetime.strptime(raw[:19], fmt).timestamp() * 1000)
+        except (TypeError, ValueError, OSError):
+            continue
+    return None
+
+
 def bars_elapsed_between(
     prev_time_iso: str | None,
     current_ms: int | None,
@@ -102,10 +125,8 @@ def bars_elapsed_between(
 ) -> int:
     if not prev_time_iso or not current_ms:
         return fallback
-    try:
-        prev_dt = datetime.strptime(prev_time_iso[:19], "%Y-%m-%d %H:%M:%S")
-        prev_ms = int(prev_dt.timestamp() * 1000)
-    except (TypeError, ValueError, OSError):
+    prev_ms = _parse_local_iso_ms(prev_time_iso)
+    if prev_ms is None:
         return fallback
     bar_ms = _timeframe_minutes(timeframe) * 60 * 1000
     if bar_ms <= 0:
@@ -244,6 +265,91 @@ def previous_record_time_iso(previous_record: Any) -> str | None:
     return getattr(meta, "timestamp_local_iso", None)
 
 
+def stage1_from_previous_record(previous_record: Any) -> dict[str, Any] | None:
+    """Return stage1_diagnosis dict from a previous analysis record (if present)."""
+    if previous_record is None:
+        return None
+    s1 = getattr(previous_record, "stage1_diagnosis", None)
+    if s1 is None and isinstance(previous_record, dict):
+        s1 = previous_record.get("stage1_diagnosis")
+    return s1 if isinstance(s1, dict) else None
+
+
+def assess_unfilled_limit_auto_cancel(
+    *,
+    prev_decision: dict | None,
+    prev_stage1: dict | None,
+    curr_stage1: dict | None,
+    bars_since: int,
+    invalidated: bool,
+    limit_triggered: bool,
+    max_pending_bars: int = DEFAULT_MAX_PENDING_LIMIT_BARS,
+) -> tuple[bool, str]:
+    """Auto-cancel a resting limit plan when regime changed or it aged out.
+
+    Rule (user): if previous limit plan is still unfilled (not triggered) and either
+    - pending for > max_pending_bars closed bars, OR
+    - trend direction changed, OR
+    - cycle_position changed,
+    then mark it invalidated so the next turn can propose a new plan.
+    """
+    if invalidated or limit_triggered:
+        return invalidated, ""
+    if not is_order_plan(prev_decision):
+        return invalidated, ""
+    if str((prev_decision or {}).get("order_type") or "").strip() != "限价单":
+        return invalidated, ""
+
+    prev_cycle = str((prev_stage1 or {}).get("cycle_position") or "").strip()
+    curr_cycle = str((curr_stage1 or {}).get("cycle_position") or "").strip()
+    if prev_cycle and curr_cycle and prev_cycle != curr_cycle:
+        return True, f"周期从 {prev_cycle} 变为 {curr_cycle}，未成交限价单自动取消"
+
+    prev_dir = str((prev_stage1 or {}).get("direction") or "").strip()
+    curr_dir = str((curr_stage1 or {}).get("direction") or "").strip()
+    if prev_dir and curr_dir and prev_dir != curr_dir:
+        return True, f"趋势方向从 {prev_dir} 变为 {curr_dir}，未成交限价单自动取消"
+
+    if int(bars_since or 0) > int(max_pending_bars):
+        return True, f"未成交限价单已等待 {bars_since} 根 K 线（>{max_pending_bars}）自动取消"
+
+    return invalidated, ""
+
+
+def assess_combined_plan_invalidation(
+    prev_decision: dict | None,
+    frame: Any,
+    *,
+    prev_stage1: dict | None = None,
+    curr_stage1: dict | None = None,
+    bars_since: int = 1,
+    max_pending_bars: int = DEFAULT_MAX_PENDING_LIMIT_BARS,
+) -> tuple[bool, str, bool, str, int | None]:
+    """Stop-loss, auto-expiry, and regime-change invalidation for a previous plan."""
+    invalidated, invalidation_reason = assess_plan_invalidation(prev_decision, frame)
+    limit_triggered, trigger_reason, trigger_bar = assess_limit_order_triggered(
+        prev_decision,
+        frame,
+        max_bars=bars_since,
+    )
+    invalidated, auto_reason = assess_unfilled_limit_auto_cancel(
+        prev_decision=prev_decision,
+        prev_stage1=prev_stage1,
+        curr_stage1=curr_stage1,
+        bars_since=bars_since,
+        invalidated=invalidated,
+        limit_triggered=limit_triggered,
+        max_pending_bars=max_pending_bars,
+    )
+    if auto_reason:
+        invalidation_reason = (
+            auto_reason
+            if not invalidation_reason
+            else f"{invalidation_reason}；{auto_reason}"
+        )
+    return invalidated, invalidation_reason, limit_triggered, trigger_reason, trigger_bar
+
+
 def classify_vs_previous(
     prev_decision: dict | None,
     curr_decision: dict | None,
@@ -283,6 +389,7 @@ def build_continuity_context(
     prev_decision = decision_from_previous_record(previous_record)
     prev_time = previous_record_time_iso(previous_record)
     prev_source = "analysis_record"
+    prev_stage1 = stage1_from_previous_record(previous_record)
 
     if prev_decision is None:
         csv_row = load_last_trade_csv_row(symbol, timeframe)
@@ -301,11 +408,18 @@ def build_continuity_context(
     current_ms = getattr(frame, "snapshot_ts_local_ms", None)
     bars_since = bars_elapsed_between(prev_time, current_ms, timeframe)
 
-    invalidated, invalidation_reason = assess_plan_invalidation(prev_decision, frame)
-    limit_triggered, trigger_reason, trigger_bar = assess_limit_order_triggered(
+    (
+        invalidated,
+        invalidation_reason,
+        limit_triggered,
+        trigger_reason,
+        trigger_bar,
+    ) = assess_combined_plan_invalidation(
         prev_decision,
         frame,
-        max_bars=bars_since,
+        prev_stage1=prev_stage1,
+        curr_stage1=stage1_json,
+        bars_since=bars_since,
     )
     prev_entry = _parse_price((prev_decision or {}).get("entry_price"))
     direction = str(stage1_json.get("direction") or "neutral")
@@ -327,6 +441,8 @@ def build_continuity_context(
         "tick": tick,
         "direction": direction,
         "always_in_branch": always_in,
+        "previous_cycle_position": str((prev_stage1 or {}).get("cycle_position") or ""),
+        "previous_direction": str((prev_stage1 or {}).get("direction") or ""),
         "timeframe": timeframe,
     }
 
@@ -401,6 +517,10 @@ def render_continuity_prompt_block(ctx: dict[str, Any]) -> str:
         f"- 程序判定：{status}；{trigger_status}",
         "",
         "### 裁定（按优先级）",
+        "0. **已失效**（止损触及，或程序自动取消：未成交限价单等待"
+        f">{DEFAULT_MAX_PENDING_LIMIT_BARS} 根 K 线 / 阶段一 `cycle_position` 变化 / "
+        "`direction` 变化）→ **不得**写「仍等待上一轮限价/setup」；须按本轮结构重新评估，"
+        "可给新方案或明确观望。",
         f"1. **未失效 + 限价未触发** → 默认 `order_type=不下单`、`terminal.outcome=wait`，"
         "在 watch_points 说明仍等待上一轮限价/setup 触价；"
         "**禁止**立即在相近结构位反手，除非 K1 收盘已触发失效。",
@@ -557,13 +677,17 @@ def audit_relation_fields(
     curr_entry = _parse_price((curr_decision or {}).get("entry_price"))
     same_struct = entries_same_structure(prev_entry, curr_entry, tick=tick)
 
-    invalidated, _ = assess_plan_invalidation(prev_decision, frame)
     timeframe = getattr(frame, "timeframe", "") if frame is not None else ""
     current_ms = getattr(frame, "snapshot_ts_local_ms", None) if frame is not None else None
     bars_since = bars_elapsed_between(
         prev_row.get("record_time"),
         current_ms,
         timeframe,
+    )
+    invalidated, _, _, _, _ = assess_combined_plan_invalidation(
+        prev_decision,
+        frame,
+        bars_since=bars_since,
     )
 
     rel_key = classify_vs_previous(
