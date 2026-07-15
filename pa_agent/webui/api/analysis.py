@@ -8,6 +8,7 @@ import logging
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 
 from pa_agent.webui.deps import AppState
+from pa_agent.webui.services.chat_runner import build_chat_session
 
 logger = logging.getLogger("pa_agent.webui")
 
@@ -29,6 +30,10 @@ async def ws_analysis(websocket: WebSocket) -> None:
         )
         if record is not None:
             state.last_analysis_record = record
+            # Phase 5: (re)build the free-chat session bound to this record,
+            # mirroring main_window.py::_on_record_ready_impl's "Create
+            # FreeChatSession and wire to stream panel" block.
+            state.chat_session = build_chat_session(state, record)
 
     try:
         while True:

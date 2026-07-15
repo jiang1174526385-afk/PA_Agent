@@ -21,6 +21,7 @@ from fastapi.staticfiles import StaticFiles
 from pa_agent.app_context import AppContext
 from pa_agent.orchestrator.two_stage import TwoStageOrchestrator
 from pa_agent.webui.api import analysis as analysis_api
+from pa_agent.webui.api import chat as chat_api
 from pa_agent.webui.api import decision_tree as decision_tree_api
 from pa_agent.webui.api import kline as kline_api
 from pa_agent.webui.api import models as models_api
@@ -86,6 +87,8 @@ app.add_middleware(
 app.include_router(kline_api.router, prefix="/api")
 app.include_router(kline_api.ws_router)
 app.include_router(analysis_api.ws_router)
+app.include_router(chat_api.ws_router)
+app.include_router(chat_api.router, prefix="/api")
 app.include_router(settings_api.router, prefix="/api")
 app.include_router(models_api.router, prefix="/api")
 app.include_router(reports_api.router, prefix="/api")

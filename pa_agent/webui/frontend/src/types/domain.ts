@@ -220,10 +220,22 @@ export interface RecordMeta {
   decision_stance: string;
 }
 
+export interface ChatMessage {
+  role: string;
+  content: string;
+  [key: string]: unknown;
+}
+
 export interface AnalysisRecord {
   meta: RecordMeta;
+  stage1_messages: ChatMessage[];
+  stage1_response: Record<string, unknown> | null;
   stage1_diagnosis: Stage1Diagnosis | null;
+  stage2_messages: ChatMessage[];
+  stage2_response: Record<string, unknown> | null;
   stage2_decision: StageDecision | null;
+  strategy_files_used: string[];
+  experience_loaded: Record<string, unknown>[];
   exception: Record<string, unknown> | null;
   [key: string]: unknown;
 }
@@ -249,6 +261,65 @@ export interface AnalysisWsSubmit {
 }
 
 export type AnalysisWsCancel = { type: "cancel" };
+
+// -- Phase 5: free chat + AI debug panel --------------------------------------
+
+export interface ChatUsage {
+  prompt_tokens: number;
+  cached_prompt_tokens: number;
+  completion_tokens: number;
+  total_tokens: number;
+  cache_hit_rate_pct: number;
+}
+
+export interface ChatTokenUsage {
+  total_input: number;
+  total_cached_input: number;
+  total_output: number;
+  context_used: number;
+  context_window: number;
+  context_pct: number;
+}
+
+export type ChatWsInbound =
+  | { type: "chat_reasoning"; chunk: string }
+  | { type: "chat_content"; chunk: string }
+  | {
+      type: "chat_done";
+      content: string;
+      reasoning: string;
+      usage: ChatUsage;
+      token_usage?: ChatTokenUsage;
+    }
+  | { type: "chat_error"; message: string; cancelled?: boolean };
+
+export interface ChatWsSend {
+  type: "send";
+  text: string;
+}
+
+export type ChatWsCancel = { type: "cancel" };
+
+export interface ChatDebugTurn {
+  label: string;
+  system_prompt: string;
+  user_prompt: string;
+  raw_response: Record<string, unknown>;
+  validation_info: string;
+}
+
+export interface PromptFilesInfo {
+  stage1_files: string[];
+  stage2_files: string[];
+  stage1_builtin: boolean;
+  stage2_builtin: boolean;
+  experience_count: number;
+}
+
+export interface ChatDebugContextResponse {
+  turns: ChatDebugTurn[];
+  prompt_files: PromptFilesInfo;
+}
 
 // -- Settings ------------------------------------------------------------
 

@@ -1,9 +1,12 @@
 import { useEffect, useState } from "react";
 import { ChartView } from "./chart/ChartView";
+import { ChatPanel } from "./chat/ChatPanel";
 import { DecisionPanel } from "./decision/DecisionPanel";
 import { FutureTrendPanel } from "./decision/FutureTrendPanel";
 import { DecisionTreePanel } from "./decisionTree/DecisionTreePanel";
 import { DecisionFlowPanel } from "./decisionFlow/DecisionFlowPanel";
+import { DebugPanel } from "./debug/DebugPanel";
+import { ValidationDialog } from "./debug/ValidationDialog";
 import { fetchDataSources, fetchKlineSnapshot, fetchSymbols, fetchTimeframes } from "./api/paAgentApi";
 import { useAnalysisSocket, useKlineSocket, type KlineSubscribeParams } from "./api/paAgentWs";
 import { SettingsModal } from "./settings/SettingsModal";
@@ -19,6 +22,7 @@ export function App() {
   const [klineParams, setKlineParams] = useState<KlineSubscribeParams | null>(null);
   const [snapshotFrame, setSnapshotFrame] = useState<KlineFrame | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [dismissedExceptionAt, setDismissedExceptionAt] = useState<number | null>(null);
 
   useEffect(() => {
     fetchDataSources().then(setDataSources);
@@ -102,6 +106,10 @@ export function App() {
   }
 
   const decision = state.record?.stage2_decision ?? null;
+  const showValidationDialog =
+    state.record !== null &&
+    state.record.exception !== null &&
+    dismissedExceptionAt !== state.record.meta.timestamp_local_ms;
 
   return (
     <div className="app-shell">
@@ -147,7 +155,18 @@ export function App() {
         <DecisionFlowPanel record={state.record} />
       </div>
 
+      <div className="chat-debug-row">
+        <ChatPanel record={state.record} />
+        <DebugPanel record={state.record} />
+      </div>
+
       {settingsOpen && <SettingsModal onClose={() => setSettingsOpen(false)} />}
+      {showValidationDialog && state.record && (
+        <ValidationDialog
+          record={state.record}
+          onClose={() => setDismissedExceptionAt(state.record!.meta.timestamp_local_ms)}
+        />
+      )}
     </div>
   );
 }

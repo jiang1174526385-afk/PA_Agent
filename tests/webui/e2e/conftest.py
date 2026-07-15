@@ -148,11 +148,37 @@ def _fake_submit(
     return record
 
 
+def _fake_chat_send(self, user_text, cancel_token, on_reasoning_token=None, on_content_token=None):
+    """Fake `FreeChatSession.send()` -- mirrors `_fake_submit` above: driving
+    the real DeepSeek API in e2e would need a paid key and be
+    slow/non-deterministic (phase-5-execution-plan.md §7)."""
+    from pa_agent.ai.deepseek_client import AIReply, AIUsage, CancelledError
+
+    if cancel_token.is_set():
+        raise CancelledError("e2e cancelled before call")
+    if on_reasoning_token:
+        on_reasoning_token(f"[e2e] 追问思考：{user_text}\n")
+    if on_content_token:
+        on_content_token(f"[e2e] 关于「{user_text}」的建议：维持当前止损位不变。")
+    usage = AIUsage(prompt_tokens=120, cached_prompt_tokens=40, completion_tokens=30, total_tokens=150)
+    self._ledger.add(usage)
+    return AIReply(
+        content=f"[e2e] 关于「{user_text}」的建议：维持当前止损位不变。",
+        reasoning_content=f"[e2e] 追问思考：{user_text}\n",
+        raw={"id": "e2e-chat", "model": "e2e-fake", "usage": {}},
+        usage=usage,
+        request_id="e2e-chat",
+        latency_ms=5.0,
+    )
+
+
 @pytest.fixture
 def live_server(tmp_path, monkeypatch):
+    from pa_agent.orchestrator.free_chat import FreeChatSession
     from pa_agent.orchestrator.two_stage import TwoStageOrchestrator
 
     monkeypatch.setattr(TwoStageOrchestrator, "submit", _fake_submit)
+    monkeypatch.setattr(FreeChatSession, "send", _fake_chat_send)
     monkeypatch.setattr("pa_agent.config.paths.SETTINGS_JSON_PATH", tmp_path / "settings.json")
     records_dir = tmp_path / "records" / "pending"
     monkeypatch.setattr("pa_agent.config.paths.RECORDS_PENDING_DIR", records_dir)

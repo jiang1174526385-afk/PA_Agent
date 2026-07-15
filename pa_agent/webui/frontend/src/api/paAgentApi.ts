@@ -1,5 +1,7 @@
-import { get, put } from "./client";
+import { get, post, put } from "./client";
 import type {
+  AnalysisRecord,
+  ChatDebugContextResponse,
   DataSourceChoice,
   FeishuRead,
   GeneralRead,
@@ -57,4 +59,8 @@ export function saveSettingsSection<S extends SectionName>(
   body: Record<string, unknown>,
 ): Promise<SectionReadMap[S]> {
   return put(`/api/settings/${section}`, body);
+}
+
+export function fetchChatDebugContext(record: AnalysisRecord): Promise<ChatDebugContextResponse> {
+  return post<ChatDebugContextResponse>("/api/chat/debug-context", { record });
 }

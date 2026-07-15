@@ -3,6 +3,7 @@ import type {
   AnalysisWsCancel,
   AnalysisWsInbound,
   AnalysisWsSubmit,
+  ChatWsInbound,
   KlineFrame,
   KlineWsInbound,
   KlineWsSubscribe,
@@ -167,4 +168,67 @@ export function useAnalysisSocket(onMessage: (msg: AnalysisWsInbound) => void): 
   }
 
   return { connected, submit, cancel };
+}
+
+export interface ChatSocketApi {
+  connected: boolean;
+  send: (text: string) => void;
+  cancel: () => void;
+}
+
+/** Subscribes to /ws/chat and relays every inbound message to `onMessage`.
+ * Independent connection from /ws/analysis -- FreeChatSession outlives a
+ * single analysis submission (see phase-5-execution-plan.md §0.1), so this
+ * hook reconnects with the same backoff policy but is otherwise unrelated to
+ * useAnalysisSocket's lifecycle. */
+export function useChatSocket(onMessage: (msg: ChatWsInbound) => void): ChatSocketApi {
+  const [connected, setConnected] = useState(false);
+  const wsRef = useRef<WebSocket | null>(null);
+  const reconnectAttempt = useRef(0);
+  const reconnectTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const onMessageRef = useRef(onMessage);
+  onMessageRef.current = onMessage;
+
+  useEffect(() => {
+    let cancelled = false;
+
+    function connect() {
+      if (cancelled) return;
+      const ws = new WebSocket(wsUrl("/ws/chat"));
+      wsRef.current = ws;
+
+      ws.onopen = () => {
+        reconnectAttempt.current = 0;
+        setConnected(true);
+      };
+      ws.onmessage = (ev) => {
+        onMessageRef.current(JSON.parse(ev.data));
+      };
+      ws.onclose = () => {
+        setConnected(false);
+        if (cancelled) return;
+        const delay = Math.min(BACKOFF_BASE_MS * 2 ** reconnectAttempt.current, BACKOFF_MAX_MS);
+        reconnectAttempt.current += 1;
+        reconnectTimer.current = setTimeout(connect, delay);
+      };
+      ws.onerror = () => ws.close();
+    }
+
+    connect();
+    return () => {
+      cancelled = true;
+      if (reconnectTimer.current) clearTimeout(reconnectTimer.current);
+      wsRef.current?.close();
+    };
+  }, []);
+
+  function send(text: string) {
+    wsRef.current?.send(JSON.stringify({ type: "send", text }));
+  }
+
+  function cancel() {
+    wsRef.current?.send(JSON.stringify({ type: "cancel" }));
+  }
+
+  return { connected, send, cancel };
 }

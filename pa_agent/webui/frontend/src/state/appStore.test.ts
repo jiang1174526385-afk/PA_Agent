@@ -38,7 +38,18 @@ describe("appStore reducer", () => {
     let state = { ...defaultAppState, analysisInProgress: true };
     const withRecord = reducer(state, {
       type: "ANALYSIS_RECORD",
-      record: { meta: {} as never, stage1_diagnosis: null, stage2_decision: null, exception: null },
+      record: {
+        meta: {} as never,
+        stage1_messages: [],
+        stage1_response: null,
+        stage1_diagnosis: null,
+        stage2_messages: [],
+        stage2_response: null,
+        stage2_decision: null,
+        strategy_files_used: [],
+        experience_loaded: [],
+        exception: null,
+      },
     });
     expect(withRecord.analysisInProgress).toBe(false);
 
