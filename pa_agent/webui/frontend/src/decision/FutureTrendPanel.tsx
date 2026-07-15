@@ -1,4 +1,4 @@
-import type { StageDecision } from "../types/domain";
+import type { MaybeNestedStageDecision, StageDecision } from "../types/domain";
 
 const DIRECTION_ZH: Record<string, string> = { bullish: "阳线", bearish: "阴线", neutral: "中性" };
 const DOMINANT_COLOR: Record<string, string> = {
@@ -16,8 +16,13 @@ function dominantDirection(probs: { bullish: number; bearish: number; neutral: n
 /** Mirrors pa_agent/gui/future_trend_panel.py::FutureTrendPanel: next-bar and
  * next-cycle prediction modules, each hidden entirely when its field is absent. */
 export function FutureTrendPanel({ decision }: { decision: StageDecision | null }) {
-  const bar = decision?.next_bar_prediction;
-  const cycle = decision?.next_cycle_prediction;
+  // Phase 7 (§0.1): normalize possibly-nested `stage2_decision` shape, same as
+  // DecisionPanel, so `next_bar_prediction`/`next_cycle_prediction` are found
+  // whether they live at the top level (flat fixtures) or under `decision`
+  // (real production nesting).
+  const inner = (decision as MaybeNestedStageDecision)?.decision ?? decision;
+  const bar = inner?.next_bar_prediction;
+  const cycle = inner?.next_cycle_prediction;
 
   if (!decision || (!bar && !cycle)) {
     return (

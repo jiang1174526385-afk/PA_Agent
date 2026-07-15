@@ -1,7 +1,7 @@
 # PA_Agent Web 前端迁移总纲
 
 > 创建日期：2026-07-15
-> 状态：进行中（阶段一已完成，阶段二待执行）
+> 状态：**已完成**（阶段一至七全部验收通过，见 [`phase-7-completion-report.md`](phase-7-completion-report.md) 与 [`final-acceptance-report.md`](final-acceptance-report.md)）
 > 架构参照：`tradingAgents/webui/`（见 `tradingAgents/docs/dev_guide/terminal.md`）
 > 协议参照：`tradingAgents/docs/local/designs/design/strategy_plugin_migration/README.md`
 > 设计参照（阶段二专用）：`pa_agent/qunyou/AD48DF6289CB6A9D51FE0B8EE2EC38C2.jpg`（交易记录分析报告仪表盘视觉稿，见 §5 阶段二）

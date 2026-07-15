@@ -19,7 +19,7 @@ import { OrderOpportunityToast } from "./notify/OrderOpportunityToast";
 import { SettingsModal } from "./settings/SettingsModal";
 import { useAppState } from "./state/appStore";
 import { Toolbar } from "./toolbar/Toolbar";
-import type { DataSourceChoice, DemoRecordSummary, KlineFrame } from "./types/domain";
+import type { DataSourceChoice, DemoRecordSummary, KlineFrame, TradeMetrics } from "./types/domain";
 
 export function App() {
   const { state, dispatch } = useAppState();
@@ -34,6 +34,13 @@ export function App() {
   const [demoRecordId, setDemoRecordId] = useState("");
   const [demoRunning, setDemoRunning] = useState(false);
   const [orderAlert, setOrderAlert] = useState<string | null>(null);
+  const [tradeMetrics, setTradeMetrics] = useState<TradeMetrics | null>(null);
+  // -- Phase 7: "等待K线收盘后分析" -------------------------------------------
+  const [waitForClose, setWaitForClose] = useState(false);
+  const [pendingSubmitMode, setPendingSubmitMode] = useState<"full" | "incremental" | null>(null);
+  // -- Phase 7: chart freeze/resume during analysis ----------------------------
+  const [chartFrozen, setChartFrozen] = useState(false);
+  const [frozenFrame, setFrozenFrame] = useState<KlineFrame | null>(null);
 
   useEffect(() => {
     fetchDataSources().then(setDataSources);
@@ -76,6 +83,7 @@ export function App() {
         break;
       case "record":
         dispatch({ type: "ANALYSIS_RECORD", record: msg.record });
+        setTradeMetrics(msg.trade_metrics ?? null);
         // Refresh the demo-record picker: a real submission just wrote a new
         // file under records/pending/ that could now be played back.
         fetchDemoRecords().then((r) => setDemoRecords(r.records));
@@ -99,6 +107,25 @@ export function App() {
     setSymbols([]);
     setTimeframes([]);
     setKlineParams(null);
+    resetWaitAndFreezeState();
+  }
+
+  // Desktop behaviour (PA_Agent使用文档.md §16/§6): switching symbol/timeframe
+  // resets the chart and cancels any in-flight "等待收盘" arm/frozen snapshot.
+  function resetWaitAndFreezeState() {
+    setPendingSubmitMode(null);
+    setChartFrozen(false);
+    setFrozenFrame(null);
+  }
+
+  function handleSymbolChange(symbol: string) {
+    dispatch({ type: "SET_SYMBOL", symbol });
+    resetWaitAndFreezeState();
+  }
+
+  function handleTimeframeChange(timeframe: string) {
+    dispatch({ type: "SET_TIMEFRAME", timeframe });
+    resetWaitAndFreezeState();
   }
 
   function handleFetchData() {
@@ -116,15 +143,68 @@ export function App() {
     });
   }
 
-  function handleSubmitFull() {
+  function freezeChartNow() {
+    setFrozenFrame(kline.frame ?? snapshotFrame);
+    setChartFrozen(true);
+  }
+
+  function submitFullNow() {
     dispatch({ type: "ANALYSIS_SUBMITTED" });
+    freezeChartNow();
     analysis.submit({ type: "submit", mode: "full" });
+  }
+
+  function submitIncrementalNow() {
+    dispatch({ type: "ANALYSIS_SUBMITTED" });
+    freezeChartNow();
+    analysis.submit({ type: "submit", mode: "incremental" });
+  }
+
+  function handleSubmitFull() {
+    if (waitForClose && kline.frame?.is_forming) {
+      setPendingSubmitMode("full");
+      return;
+    }
+    submitFullNow();
+  }
+
+  function handleSubmitIncremental() {
+    if (waitForClose && kline.frame?.is_forming) {
+      setPendingSubmitMode("incremental");
+      return;
+    }
+    submitIncrementalNow();
+  }
+
+  function handleWaitForCloseChange(checked: boolean) {
+    setWaitForClose(checked);
+    if (!checked) {
+      // Desktop behaviour (§6): unchecking cancels a pending wait.
+      setPendingSubmitMode(null);
+    }
+  }
+
+  // Auto-submit once the bar we armed the wait for has actually closed.
+  useEffect(() => {
+    if (!pendingSubmitMode) return;
+    if (!kline.frame || kline.frame.is_forming) return;
+    const mode = pendingSubmitMode;
+    setPendingSubmitMode(null);
+    if (mode === "full") submitFullNow();
+    else submitIncrementalNow();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [kline.frame, pendingSubmitMode]);
+
+  function handleResumeChart() {
+    setChartFrozen(false);
+    setFrozenFrame(null);
   }
 
   function handlePlayDemo(recordId: string) {
     if (!recordId) return;
     setDemoRunning(true);
     dispatch({ type: "ANALYSIS_SUBMITTED" });
+    freezeChartNow();
     analysis.submit({ type: "submit", mode: "demo", demo_record_id: recordId });
   }
 
@@ -133,11 +213,6 @@ export function App() {
     const pick = demoRecords[Math.floor(Math.random() * demoRecords.length)];
     setDemoRecordId(pick.record_id);
     handlePlayDemo(pick.record_id);
-  }
-
-  function handleSubmitIncremental() {
-    dispatch({ type: "ANALYSIS_SUBMITTED" });
-    analysis.submit({ type: "submit", mode: "incremental" });
   }
 
   const decision = state.record?.stage2_decision ?? null;
@@ -161,8 +236,8 @@ export function App() {
         klineConnected={kline.connected}
         analysisConnected={analysis.connected}
         onSourceChange={handleSourceChange}
-        onSymbolChange={(symbol) => dispatch({ type: "SET_SYMBOL", symbol })}
-        onTimeframeChange={(timeframe) => dispatch({ type: "SET_TIMEFRAME", timeframe })}
+        onSymbolChange={handleSymbolChange}
+        onTimeframeChange={handleTimeframeChange}
         onNBarsChange={(nBars) => dispatch({ type: "SET_N_BARS", nBars })}
         onFetchData={handleFetchData}
         onSubmitFull={handleSubmitFull}
@@ -175,10 +250,18 @@ export function App() {
         onDemoRecordChange={setDemoRecordId}
         onPlayDemo={() => handlePlayDemo(demoRecordId)}
         onPlayRandomDemo={handlePlayRandomDemo}
+        waitForClose={waitForClose}
+        onWaitForCloseChange={handleWaitForCloseChange}
+        waitingForCloseSeconds={pendingSubmitMode ? (kline.frame?.seconds_until_close ?? null) : null}
+        chartFrozen={chartFrozen}
+        onResumeChart={handleResumeChart}
       />
 
       <div className="main-layout">
-        <ChartView frame={kline.frame ?? snapshotFrame} decision={decision} />
+        <ChartView
+          frame={chartFrozen ? frozenFrame : (kline.frame ?? snapshotFrame)}
+          decision={decision}
+        />
         <div className="side-pane">
           {state.statusMessage && <div className="panel">{state.statusMessage}</div>}
           {state.errorMessage && (
@@ -186,7 +269,7 @@ export function App() {
               {state.errorMessage}
             </div>
           )}
-          <DecisionPanel decision={decision} />
+          <DecisionPanel decision={decision} tradeMetrics={tradeMetrics} />
           <FutureTrendPanel decision={decision} />
           <DecisionTreePanel record={state.record} />
         </div>

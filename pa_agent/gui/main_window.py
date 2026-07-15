@@ -1,4 +1,10 @@
-﻿"""Main application window for PA Agent."""
+﻿"""Main application window for PA Agent.
+
+Legacy / reference implementation -- see pa_agent/gui/__init__.py's module
+docstring. `pa_agent/webui/` is the primary interactive entry point as of the
+docs/webui_migration/ project's completion; this window remains supported and
+independently runnable but is not a target for new features.
+"""
 from __future__ import annotations
 
 import logging

@@ -29,6 +29,13 @@ export interface ToolbarProps {
   onDemoRecordChange: (recordId: string) => void;
   onPlayDemo: () => void;
   onPlayRandomDemo: () => void;
+  // -- Phase 7: wait-for-bar-close before submitting ---------------------------
+  waitForClose: boolean;
+  onWaitForCloseChange: (checked: boolean) => void;
+  waitingForCloseSeconds: number | null;
+  // -- Phase 7: chart freeze/resume during analysis ----------------------------
+  chartFrozen: boolean;
+  onResumeChart: () => void;
 }
 
 
@@ -110,6 +117,29 @@ export function Toolbar(props: ToolbarProps) {
 
       {props.analysisInProgress && (
         <button onClick={props.onCancelAnalysis}>取消分析</button>
+      )}
+
+      <label
+        style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 12 }}
+        title="勾选后，点击提交分析将先等待当前未收盘K线走完，再抓取数据并开始分析"
+      >
+        <input
+          type="checkbox"
+          checked={props.waitForClose}
+          onChange={(e) => props.onWaitForCloseChange(e.target.checked)}
+        />
+        等待收盘
+      </label>
+      {props.waitingForCloseSeconds !== null && (
+        <span className="status-pill" data-testid="wait-close-countdown">
+          等待当前K线收盘…还剩 {props.waitingForCloseSeconds} 秒
+        </span>
+      )}
+
+      {props.chartFrozen && (
+        <button data-testid="resume-chart-button" onClick={props.onResumeChart}>
+          图表实时更新
+        </button>
       )}
 
       <select

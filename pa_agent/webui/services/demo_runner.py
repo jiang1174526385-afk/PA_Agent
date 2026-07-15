@@ -22,6 +22,7 @@ from typing import TYPE_CHECKING, Any
 
 from pa_agent.ai.response_extract import content_from_response, reasoning_from_response
 from pa_agent.util.threading import CancelToken
+from pa_agent.webui.services.trade_metrics_view import build_trade_metrics
 
 if TYPE_CHECKING:
     from fastapi import WebSocket
@@ -77,7 +78,14 @@ def build_demo_steps(record: "AnalysisRecord") -> list[tuple[int, dict[str, Any]
 
     # Match real worker: stream ends, then record persisted, then record → finished.
     add(300, {"type": "event", "event": "DemoRecordSaved", "message": "记录已保存"})
-    add(120, {"type": "record", "record": r.model_dump()})
+    add(
+        120,
+        {
+            "type": "record",
+            "record": r.model_dump(),
+            "trade_metrics": build_trade_metrics(r),
+        },
+    )
     add(200, {"type": "demo_finished"})
     return steps
 

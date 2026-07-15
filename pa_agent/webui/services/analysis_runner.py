@@ -13,6 +13,7 @@ import logging
 from typing import TYPE_CHECKING, Any
 
 from pa_agent.util.threading import CancelToken, OrchestratorEvent
+from pa_agent.webui.services.trade_metrics_view import build_trade_metrics
 
 if TYPE_CHECKING:
     from fastapi import WebSocket
@@ -130,5 +131,11 @@ class AnalysisRunner:
             self._busy = False
             self._cancel_token = None
 
-        await ws.send_json({"type": "record", "record": record.model_dump()})
+        await ws.send_json(
+            {
+                "type": "record",
+                "record": record.model_dump(),
+                "trade_metrics": build_trade_metrics(record),
+            }
+        )
         return record

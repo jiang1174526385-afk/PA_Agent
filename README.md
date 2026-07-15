@@ -1,10 +1,12 @@
-# PA Agent — AI K线分析辅助工具（桌面端）
+# PA Agent — AI K线分析辅助工具
 
 **交流 QQ 群：1016222782**
 
 ---
 
 面向主观交易者的 **价格行为（Price Action）** AI 辅助决策工具。从 **MT5 / TradingView / yfinance / AkShare** 读取 K 线，将结构化 K 线数据与预计算特征送入大模型做**两阶段分析**（市场诊断 → 交易决策），**不是**截图识图，**不连接券商、不执行下单**。
+
+**Web 端（`pa_agent/webui/`，FastAPI + React）现为主要交互入口**，覆盖桌面版全部功能（K线图、AI 两阶段决策分析、决策树回放、动画流程图可视化、自由对话、演示模式回放、飞书/PushPlus 通知触发），并新增桌面版没有的交易记录分析报告页面。原 PyQt6 桌面 GUI（`pa_agent/gui/`）保留在仓库中作为参考/备用实现，可独立运行，但不再投入新功能开发——迁移过程与范围见 [`docs/webui_migration/`](docs/webui_migration/)（含最终验收报告 [`docs/webui_migration/final-acceptance-report.md`](docs/webui_migration/final-acceptance-report.md)）。
 
 ---
 
@@ -34,16 +36,26 @@
 
 ---
 
-## 快速开始
+## 快速开始（Web 端，推荐）
 
-直接在系统中安装（推荐部署在本机）：
+```cmd
+pip install -e ".[webui]"
+cd pa_agent/webui/frontend && npm install && npm run build && cd ../../..
+python start_webui.py
+```
+
+浏览器打开 `http://127.0.0.1:8765`，在**设置**中填写 **Base URL**、**模型名** 与 **API Key**。
+
+> 前端开发模式（Vite dev server，热重载，代理 `/api`/`/ws` 到 127.0.0.1:8765）：`make dev-webui-frontend`（需另开一个终端先 `make run-webui`）。也可用 `make run-webui` / `make build-webui-frontend` 代替上面两条命令。
+
+## 桌面端（PyQt6，legacy 参考实现）
 
 ```cmd
 pip install -e .
 python -m pa_agent.main
 ```
 
-首次启动后在**设置**中填写 **Base URL**、**模型名** 与 **API Key**。
+首次启动后在**设置**中填写 **Base URL**、**模型名** 与 **API Key**。桌面端功能与 Web 端等价（迁移期间未删减），仍可独立运行，但新功能只在 Web 端实现，详见 `pa_agent/gui/` 目录顶部说明。
 
 > 如需隔离环境也可创建虚拟环境：`python -m venv .venv` 后激活再 `pip install -e .`。
 
@@ -55,7 +67,7 @@ python -m pa_agent.main
 
 ## 详细说明
 
-完整操作界面说明见 [`PA_Agent使用文档.md`](PA_Agent使用文档.md)，配置字段说明见 [`config/README.md`](config/README.md)。
+完整操作界面说明见 [`PA_Agent使用文档.md`](PA_Agent使用文档.md)（以桌面版界面为主线描述，Web 端功能对等，界面细节以实际页面为准），配置字段说明见 [`config/README.md`](config/README.md)。Web 端迁移的设计与阶段记录见 [`docs/webui_migration/`](docs/webui_migration/)。
 
 ---
 

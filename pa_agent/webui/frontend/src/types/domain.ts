@@ -25,6 +25,10 @@ export interface KlineFrame {
   bars: KlineBar[];
   indicators: IndicatorBundle;
   snapshot_ts_local_ms: number;
+  // Phase 7 ("等待K线收盘后分析"): whether the newest bar is still forming,
+  // and if so how many whole seconds remain until it closes.
+  is_forming: boolean;
+  seconds_until_close: number | null;
 }
 
 export interface DataSourceChoice {
@@ -90,6 +94,14 @@ export interface StageDecision {
   terminal?: DecisionTreeTerminal | null;
   gate_shortcircuited?: boolean;
 }
+
+// Phase 7 (§0.1 stage2_decision unwrap fix): real production `stage2_decision`
+// is nested as `{ decision: {...StageDecision fields...}, decision_trace, ... }`,
+// while historical test fixtures use a flat shape (the same fields directly at
+// the top level, no `decision` wrapper). This type documents both possible
+// shapes so components can normalize with `(decision as any)?.decision ?? decision`
+// without widening `StageDecision` itself.
+export type MaybeNestedStageDecision = StageDecision & { decision?: StageDecision | null };
 
 // -- Phase 3: decision tree replay ----------------------------------------
 
@@ -240,6 +252,18 @@ export interface AnalysisRecord {
   [key: string]: unknown;
 }
 
+// Phase 7 (§9 trader-equation/win-rate/risk-reward): sent alongside `record`
+// in the "record" WS message, sibling to `record` itself. Whole object may be
+// null (empty record, no parseable decision, or order_type is "不下单").
+export interface TradeMetrics {
+  risk_reward_ratio: number | null;
+  risk_reward_text: string | null; // e.g. "2.50 : 1"
+  estimated_win_rate_pct: number | null;
+  trader_equation_passed: boolean | null;
+  min_risk_reward_ratio: number;
+  max_risk_reward_ratio: number | null;
+}
+
 // -- WS /ws/analysis messages -------------------------------------------------
 
 export type AnalysisWsInbound =
@@ -250,7 +274,7 @@ export type AnalysisWsInbound =
   | { type: "stage2_content"; chunk: string }
   | { type: "stage_prompt"; stage: string; system: string; user: string }
   | { type: "stage2_files"; files: string[] }
-  | { type: "record"; record: AnalysisRecord }
+  | { type: "record"; record: AnalysisRecord; trade_metrics?: TradeMetrics | null }
   | { type: "error"; message: string }
   // -- Phase 6: demo replay + order-opportunity alert ------------------------
   | { type: "demo_finished" }

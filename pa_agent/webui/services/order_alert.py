@@ -20,6 +20,7 @@ import threading
 from typing import TYPE_CHECKING
 
 from pa_agent.gui.order_opportunity import format_order_alert_message, has_order_opportunity
+from pa_agent.webui.services.decision_shape import decision_inner as _decision_inner
 
 if TYPE_CHECKING:
     from fastapi import WebSocket
@@ -28,19 +29,6 @@ if TYPE_CHECKING:
     from pa_agent.webui.deps import AppState
 
 logger = logging.getLogger("pa_agent.webui")
-
-
-def _decision_inner(stage2_decision: dict | None) -> dict | None:
-    """Unwrap the real (nested) `{"decision": {...}}` stage-2 JSON shape.
-
-    Falls back to treating *stage2_decision* itself as already-flat, which is
-    the shape this webui test suite's fake orchestrators use (see
-    tests/webui/conftest.py::_make_record / e2e/conftest.py::_build_record).
-    """
-    if not isinstance(stage2_decision, dict):
-        return None
-    inner = stage2_decision.get("decision")
-    return inner if isinstance(inner, dict) else stage2_decision
 
 
 async def maybe_alert_order_opportunity(

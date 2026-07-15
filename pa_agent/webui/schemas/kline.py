@@ -10,6 +10,7 @@ from __future__ import annotations
 from pydantic import BaseModel
 
 from pa_agent.data.base import IndicatorBundle, KlineBar, KlineFrame
+from pa_agent.data.bar_close_wait import has_forming_bar_at_head, seconds_until_bar_closes
 
 
 class KlineBarOut(BaseModel):
@@ -61,15 +62,28 @@ class KlineFrameOut(BaseModel):
     bars: list[KlineBarOut]
     indicators: IndicatorBundleOut
     snapshot_ts_local_ms: int
+    is_forming: bool = False
+    seconds_until_close: int | None = None
 
     @classmethod
     def from_frame(cls, frame: KlineFrame) -> KlineFrameOut:
+        # `frame.bars` is newest-first (bars[0] is the newest/forming bar; see
+        # `pa_agent.data.base.KlineFrame`'s docstring), matching the ordering
+        # `has_forming_bar_at_head`/`seconds_until_bar_closes` expect.
+        is_forming = has_forming_bar_at_head(list(frame.bars), frame.timeframe)
+        seconds_until_close = None
+        if is_forming and frame.bars:
+            seconds_until_close = seconds_until_bar_closes(
+                frame.bars[0].ts_open, frame.timeframe
+            )
         return cls(
             symbol=frame.symbol,
             timeframe=frame.timeframe,
             bars=[KlineBarOut.from_bar(b) for b in frame.bars],
             indicators=IndicatorBundleOut.from_bundle(frame.indicators),
             snapshot_ts_local_ms=frame.snapshot_ts_local_ms,
+            is_forming=is_forming,
+            seconds_until_close=seconds_until_close,
         )
 
 
