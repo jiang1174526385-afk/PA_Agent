@@ -5,7 +5,7 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 DecisionStance = Literal["conservative", "balanced", "aggressive", "extreme_aggressive"]
-DataSourceKind = Literal["mt5", "tradingview", "akshare", "eastmoney", "tushare"]
+DataSourceKind = Literal["mt5", "tradingview", "akshare", "eastmoney", "tushare", "yfinance", "okx"]
 NormalizationMode = Literal["strict", "lenient"]
 
 

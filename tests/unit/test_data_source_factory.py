@@ -11,6 +11,7 @@ from pa_agent.data.factory import (
 )
 from pa_agent.data.eastmoney_source import EastMoneySource
 from pa_agent.data.mt5 import MT5Source
+from pa_agent.data.okx_source import OKXSource
 from pa_agent.data.tushare_source import TushareSource
 from pa_agent.data.tradingview import TradingViewSource
 
@@ -43,6 +44,7 @@ def test_create_data_source_returns_expected_types():
     assert isinstance(create_data_source("tradingview"), TradingViewSource)
     assert isinstance(create_data_source("eastmoney"), EastMoneySource)
     assert isinstance(create_data_source("tushare"), TushareSource)
+    assert isinstance(create_data_source("okx"), OKXSource)
 
 
 def test_default_symbols_per_kind():
@@ -50,6 +52,18 @@ def test_default_symbols_per_kind():
     assert default_symbol_for_kind("tradingview") == "XAUUSD"
     assert default_symbol_for_kind("eastmoney") == "000001"
     assert default_symbol_for_kind("tushare") == "000001"
+    assert default_symbol_for_kind("okx") == "BTC-USDT-SWAP"
+
+
+def test_okx_in_ui_choices():
+    ui_kinds = {k for k, _ in DATA_SOURCE_CHOICES}
+    assert "okx" in ui_kinds
+
+
+def test_okx_label():
+    from pa_agent.data.factory import data_source_label
+
+    assert data_source_label("okx") == "OKX"
 
 
 def test_default_tradingview_exchange_is_auto():
