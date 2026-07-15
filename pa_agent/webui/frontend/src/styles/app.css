@@ -230,3 +230,84 @@ button {
   justify-content: flex-end;
   gap: var(--spacing);
 }
+
+/* Phase 3: decision tree replay panel */
+
+.decision-tree-panel {
+  max-height: 480px;
+  overflow-y: auto;
+}
+
+.decision-tree-terminal-banner {
+  font-size: 14px;
+  font-weight: bold;
+  padding: 10px;
+  white-space: pre-wrap;
+  background: var(--surface-2);
+  border-radius: var(--radius);
+  margin-bottom: var(--spacing);
+}
+
+.decision-tree-section-title {
+  font-weight: bold;
+  color: var(--accent-3);
+  margin: var(--spacing) 0 4px;
+  font-size: 13px;
+}
+
+.decision-tree-path-table-wrap {
+  overflow-x: auto;
+  margin-bottom: calc(var(--spacing) * 1.5);
+}
+
+.decision-tree-path-table,
+.decision-tree-node-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.decision-tree-path-table th,
+.decision-tree-path-table td,
+.decision-tree-node-table th,
+.decision-tree-node-table td {
+  text-align: left;
+  padding: 4px 6px;
+  border-bottom: 1px solid var(--border-muted);
+  vertical-align: top;
+}
+
+.decision-tree-path-table th,
+.decision-tree-node-table th {
+  color: var(--fg-2);
+  font-weight: normal;
+}
+
+.decision-tree-path-table tbody tr {
+  cursor: pointer;
+}
+
+.decision-tree-path-table tbody tr:hover {
+  background: var(--surface-2);
+}
+
+.decision-tree-path-table tr.selected,
+.decision-tree-node-table tr.selected {
+  background: var(--surface-3);
+}
+
+.decision-tree-node-table tr.unvisited td {
+  color: var(--fg-3);
+}
+
+.decision-tree-node-table tr.visited td {
+  color: var(--accent-3);
+  font-weight: bold;
+}
+
+.decision-tree-full-tree summary {
+  cursor: pointer;
+  font-weight: bold;
+  color: var(--fg-2);
+  padding: 4px 0;
+}

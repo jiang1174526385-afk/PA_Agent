@@ -154,6 +154,17 @@ class PushPlusSettings(BaseModel):
     token: str = ""
 
 
+class OKXSettings(BaseModel):
+    """OKX private-endpoint credentials (needed only for real historical fill
+    lookups via /api/v5/account/positions-history; the public candle-fetching
+    OKXSource does not need these). Phase 2 web UI addition."""
+    model_config = ConfigDict(extra="ignore")
+
+    api_key: str = ""
+    api_secret: str = ""
+    passphrase: str = ""
+
+
 class Settings(BaseModel):
     """Root settings object persisted to config/settings.json."""
     model_config = ConfigDict(extra="ignore")
@@ -165,6 +176,7 @@ class Settings(BaseModel):
     feishu: FeishuSettings = Field(default_factory=FeishuSettings)
     pushplus: PushPlusSettings = Field(default_factory=PushPlusSettings)
     tushare: TushareSettings = Field(default_factory=TushareSettings)
+    okx: OKXSettings = Field(default_factory=OKXSettings)
 
 
 def provider_api_key_configured(settings: Settings | None) -> bool:

@@ -41,10 +41,23 @@ def _make_record(cancelled: bool = False) -> AnalysisRecord:
         htf_text="",
         stage1_messages=[],
         stage1_response=None,
-        stage1_diagnosis=None,
+        stage1_diagnosis=None
+        if cancelled
+        else {
+            "gate_result": "proceed",
+            "gate_trace": [{"node_id": "1.1", "question": "q1", "answer": "是", "reason": "r1", "bar_range": "K3-K1"}],
+        },
         stage2_messages=[],
         stage2_response=None,
-        stage2_decision=None if cancelled else {"order_type": "买入", "trade_confidence": 80},
+        stage2_decision=None
+        if cancelled
+        else {
+            "order_type": "买入",
+            "trade_confidence": 80,
+            "decision_trace": [{"node_id": "9.0", "question": "q2", "answer": "否", "reason": "r2", "bar_range": "K1"}],
+            "terminal": {"node_id": "9.0", "outcome": "wait", "label": "等待"},
+            "gate_shortcircuited": False,
+        },
         strategy_files_used=[],
         experience_loaded=[],
         exception=None,
@@ -143,6 +156,14 @@ def test_submit_full_analysis_message_sequence(build_app):
         record_msg = messages[-1]
         assert record_msg["record"]["stage2_decision"]["order_type"] == "买入"
         assert orchestrator.submit_calls[0]["previous_record"] is None
+
+        # phase 3: /ws/analysis must transparently forward gate_trace/decision_trace/
+        # terminal inside stage1_diagnosis/stage2_decision -- AnalysisRecord.model_dump()
+        # is a plain dict pass-through (see docs/webui_migration/phase-3-execution-plan.md §3.5).
+        record = record_msg["record"]
+        assert record["stage1_diagnosis"]["gate_trace"][0]["node_id"] == "1.1"
+        assert record["stage2_decision"]["decision_trace"][0]["node_id"] == "9.0"
+        assert record["stage2_decision"]["terminal"]["outcome"] == "wait"
 
 
 def test_submit_incremental_passes_previous_record(build_app):

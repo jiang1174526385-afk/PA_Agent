@@ -16,12 +16,13 @@ from pydantic import BaseModel
 from pa_agent.config.settings import (
     FeishuSettings,
     GeneralSettings,
+    OKXSettings,
     PushPlusSettings,
     Settings,
 )
 from pa_agent.util.mask_secret import mask_secret
 
-SectionName = Literal["provider", "general", "feishu", "pushplus"]
+SectionName = Literal["provider", "general", "feishu", "pushplus", "okx"]
 
 
 class ProviderRead(BaseModel):
@@ -126,6 +127,21 @@ class PushPlusWrite(BaseModel):
     token: str | None = None
 
 
+class OKXRead(BaseModel):
+    api_key_masked: str
+    api_key_set: bool
+    api_secret_masked: str
+    api_secret_set: bool
+    passphrase_masked: str
+    passphrase_set: bool
+
+
+class OKXWrite(BaseModel):
+    api_key: str | None = None
+    api_secret: str | None = None
+    passphrase: str | None = None
+
+
 def provider_to_read(p) -> ProviderRead:
     return ProviderRead(
         model=p.model,
@@ -160,6 +176,17 @@ def pushplus_to_read(pp: PushPlusSettings) -> PushPlusRead:
         enabled=pp.enabled,
         token_masked=mask_secret(pp.token),
         token_set=bool(pp.token.strip()),
+    )
+
+
+def okx_to_read(o: OKXSettings) -> OKXRead:
+    return OKXRead(
+        api_key_masked=mask_secret(o.api_key),
+        api_key_set=bool(o.api_key.strip()),
+        api_secret_masked=mask_secret(o.api_secret),
+        api_secret_set=bool(o.api_secret.strip()),
+        passphrase_masked=mask_secret(o.passphrase),
+        passphrase_set=bool(o.passphrase.strip()),
     )
 
 
@@ -209,3 +236,13 @@ def apply_pushplus_write(settings: Settings, write: PushPlusWrite) -> None:
         pp.enabled = write.enabled
     if write.token is not None:
         pp.token = write.token
+
+
+def apply_okx_write(settings: Settings, write: OKXWrite) -> None:
+    o = settings.okx
+    if write.api_key is not None:
+        o.api_key = write.api_key
+    if write.api_secret is not None:
+        o.api_secret = write.api_secret
+    if write.passphrase is not None:
+        o.passphrase = write.passphrase

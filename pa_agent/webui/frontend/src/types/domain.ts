@@ -85,6 +85,86 @@ export interface StageDecision {
   estimated_win_rate?: number | null;
   next_bar_prediction?: NextBarPrediction | null;
   next_cycle_prediction?: NextCyclePrediction | null;
+  // Phase 3: decision tree replay (mirrors pa_agent/ai/decision_tree.py trace item shape).
+  decision_trace?: DecisionTraceItem[];
+  terminal?: DecisionTreeTerminal | null;
+  gate_shortcircuited?: boolean;
+}
+
+// -- Phase 3: decision tree replay ----------------------------------------
+
+export interface DecisionTraceItem {
+  node_id: string;
+  question?: string;
+  answer?: string;
+  reason?: string;
+  branch?: string | null;
+  bar_range?: string;
+  bar_from?: number;
+  bar_to?: number;
+  skipped?: boolean;
+  [key: string]: unknown;
+}
+
+export interface DecisionTreeTerminal {
+  node_id: string;
+  outcome: "wait" | "reject" | "trade" | "proceed";
+  label?: string;
+}
+
+export interface DecisionTreeNode {
+  id: string;
+  question: string;
+}
+
+export interface DecisionTreeSection {
+  id: string;
+  title: string;
+  nodes: DecisionTreeNode[];
+}
+
+export interface DecisionTreeStaticResponse {
+  version: number;
+  source: string;
+  sections: DecisionTreeSection[];
+}
+
+export interface DecisionTreeReplayRequest {
+  gate_trace?: DecisionTraceItem[] | null;
+  decision_trace?: DecisionTraceItem[] | null;
+  terminal?: DecisionTreeTerminal | null;
+  gate_result?: string | null;
+  gate_shortcircuited?: boolean;
+}
+
+export interface DecisionTreeReplayRow {
+  step: number;
+  phase: string;
+  phase_zh: string;
+  node_id: string;
+  answer_display: string;
+  answer_color_key: "success" | "danger" | "warning" | "muted" | "secondary";
+  basis: string;
+  reason_display: string;
+  tooltip: string;
+}
+
+export interface DecisionTreeTerminalBanner {
+  text: string;
+  color_key: "success" | "warning" | "danger" | "muted";
+}
+
+export interface DecisionTreeReplayResponse {
+  rows: DecisionTreeReplayRow[];
+  visited_ids: string[];
+  terminal_banner: DecisionTreeTerminalBanner;
+  gate_hint: string;
+}
+
+export interface Stage1Diagnosis {
+  gate_trace?: DecisionTraceItem[];
+  gate_result?: "proceed" | "wait" | "unknown";
+  [key: string]: unknown;
 }
 
 export interface RecordMeta {
@@ -99,7 +179,7 @@ export interface RecordMeta {
 
 export interface AnalysisRecord {
   meta: RecordMeta;
-  stage1_diagnosis: Record<string, unknown> | null;
+  stage1_diagnosis: Stage1Diagnosis | null;
   stage2_decision: StageDecision | null;
   exception: Record<string, unknown> | null;
   [key: string]: unknown;
@@ -181,4 +261,109 @@ export interface PushPlusRead {
   token_set: boolean;
 }
 
-export type SectionName = "provider" | "general" | "feishu" | "pushplus";
+export interface OKXRead {
+  api_key_masked: string;
+  api_key_set: boolean;
+  api_secret_masked: string;
+  api_secret_set: boolean;
+  passphrase_masked: string;
+  passphrase_set: boolean;
+}
+
+export type SectionName = "provider" | "general" | "feishu" | "pushplus" | "okx";
+
+// -- Phase 2: trade-record analysis report --------------------------------
+
+export interface ReportListItem {
+  key: string;
+  symbol: string;
+  timeframe: string;
+  row_count: number;
+}
+
+export interface BackfillResponse {
+  processed: number;
+  matched: number;
+  unmatched: number;
+  skipped_already_filled: number;
+}
+
+export interface EquityPoint {
+  ts: string;
+  equity_usd: number;
+}
+
+export interface MonthlyReturnPoint {
+  month: string;
+  pnl_usd: number;
+}
+
+export interface SymbolDistributionSlice {
+  symbol: string;
+  abs_pnl_usd: number;
+  pct: number;
+}
+
+export interface HoldingTimeBucket {
+  bucket: string;
+  count: number;
+  pct: number;
+}
+
+export interface SlippageBucket {
+  label: string;
+  count: number;
+}
+
+export interface SlippageDistribution {
+  avg: number | null;
+  median: number | null;
+  buckets: SlippageBucket[];
+}
+
+export interface ReportSummaryResponse {
+  total_pnl_usd: number;
+  max_drawdown_usd: number;
+  max_drawdown_pct: number | null;
+  profit_factor: number | null;
+  win_rate_pct: number;
+  win_count: number;
+  loss_count: number;
+  long_win_rate_pct: number | null;
+  short_win_rate_pct: number | null;
+  avg_win_loss_ratio: number | null;
+  trade_count: number;
+  avg_trades_per_day: number;
+  max_consecutive_losses: number;
+  stagnation_days: number;
+  long_net_pnl_usd: number;
+  short_net_pnl_usd: number;
+  equity_curve: EquityPoint[];
+  monthly_returns: MonthlyReturnPoint[];
+  symbol_distribution: SymbolDistributionSlice[];
+  holding_time_distribution: HoldingTimeBucket[];
+  slippage: SlippageDistribution;
+}
+
+export interface OrderRow {
+  record_time: string;
+  symbol: string;
+  order_direction: string;
+  entry_price: string;
+  actual_entry_price?: string;
+  actual_exit_price: string;
+  pnl_usd: string;
+  pnl_pips: string;
+  holding_duration_s: string;
+  decision_stance: string;
+  fill_status: string;
+  win_loss: string;
+  [key: string]: unknown;
+}
+
+export interface OrdersResponse {
+  total: number;
+  page: number;
+  page_size: number;
+  rows: OrderRow[];
+}

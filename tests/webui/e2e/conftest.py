@@ -41,7 +41,24 @@ def _build_record(frame, previous_record, *, cancelled: bool) -> AnalysisRecord:
         htf_text="",
         stage1_messages=[],
         stage1_response=None,
-        stage1_diagnosis=None if cancelled else {"direction": "上涨", "market_phase": "stable"},
+        stage1_diagnosis=(
+            None
+            if cancelled
+            else {
+                "direction": "上涨",
+                "market_phase": "stable",
+                "gate_result": "proceed",
+                "gate_trace": [
+                    {
+                        "node_id": "1.1",
+                        "question": "[e2e] 是否存在明确趋势方向？（基于K10-K1判断）",
+                        "answer": "是",
+                        "reason": "[e2e] 趋势清晰",
+                        "bar_range": "K10-K1",
+                    },
+                ],
+            }
+        ),
         stage2_messages=[],
         stage2_response=None,
         stage2_decision=(
@@ -57,6 +74,24 @@ def _build_record(frame, previous_record, *, cancelled: bool) -> AnalysisRecord:
                 "stop_loss_price": 95.0,
                 "reasoning": "E2E fake analysis result for smoke testing.",
                 "estimated_win_rate": 60,
+                "decision_trace": [
+                    {
+                        "node_id": "9.0",
+                        "question": "[e2e] 是否存在有效入场信号？",
+                        "answer": "是",
+                        "reason": "[e2e] 信号有效",
+                        "bar_range": "K1",
+                    },
+                    {
+                        "node_id": "10.3",
+                        "question": "[e2e] 交易者方程是否成立？",
+                        "answer": "是",
+                        "reason": "[e2e] 盈亏比达标",
+                        "bar_range": "K1",
+                    },
+                ],
+                "terminal": {"node_id": "10.3", "outcome": "trade", "label": "[e2e] 满足下单条件"},
+                "gate_shortcircuited": False,
             }
         ),
         strategy_files_used=["e2e_strategy.txt"],

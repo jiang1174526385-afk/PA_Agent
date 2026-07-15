@@ -127,3 +127,25 @@ npm run build            # 构建成功，产物写入 ../static/pa_agent_app/
 ## 9. 是否允许进入下一阶段
 
 **允许。** 阶段一验收标准（§7 四类验证均已实际运行且通过、`config/settings.json` Web/桌面写入语义一致、`pa_agent/gui/` 零改动、无未记录的临时实现）已满足。`phase-2-execution-plan.md` 已生成。
+
+## 10. 附录：Git 仓库与提交记录（阶段一验收通过后，应用户要求补做）
+
+阶段一代码验收通过后，用户要求把改动提交并推送到独立的 GitHub 仓库，过程记录如下（供阶段二 session 了解当前仓库状态，不属于阶段一执行方案原定任务，但直接影响阶段二开始时的 `git status`/远程基线）：
+
+1. **本地 git 身份**：本机之前从未配置过 `user.name`/`user.email`，无法提交。最终确认使用 GitHub 账号 `jiang1174526385-afk` 对应的 noreply 邮箱，仅在本仓库（非 `--global`）设置：
+   ```
+   git config user.name "jiang1174526385-afk"
+   git config user.email "jiang1174526385-afk@users.noreply.github.com"
+   ```
+2. **提交拆分为两个逻辑单元**：
+   - `8bd6473`「Add OKX data source support」——本 session 开始前就已存在的未提交 OKX 数据源接入改动（`config/settings.py`/`data/factory.py`/`data/market_defaults.py`/`data/okx_source.py`/对应测试），与阶段一 Web UI 工作是两件事，分开提交。
+   - `3acff71`「Add PA Agent web UI phase 1: FastAPI + React MVP workbench」——本阶段全部新增/修改文件。
+   - 这两个 commit 最初误用了参照 `tradingAgents` 项目习惯的身份（`Jack <jack@tradingagents.local>`），确认后用 `git rebase -r 33170ab --exec 'git commit --amend --author=...'` 改写为正确身份（此时尚未推送到任何远程，改写历史安全）。
+3. **远程仓库**：原有 `origin` 指向 `https://github.com/rosemarycox5334-debug/PA_Agent.git`（这是一个和当前操作者不同的 GitHub 账号）。应用户要求，新建了一个独立仓库 `git@github.com:jiang1174526385-afk/PA_Agent.git` 并把 `origin` 改指向它。
+4. **推送冲突与强推**：首次 `git push -u origin main` 被拒绝——新仓库并非空仓库，已有与本地一致的历史（直到 `33170ab`）外加一个本地没有的提交 `99cc780`（`Update README QQ group number to 975328619.`）。已向用户说明这个差异，用户确认该仓库内容不重要，选择 `git push -u origin main --force` 覆盖，`99cc780` 被丢弃。
+5. **验证 SSH 认证**：推送前用 `ssh -T git@github.com` 确认过 SSH key 已经能以 `jiang1174526385-afk` 身份认证成功。
+
+**阶段二开始时需要注意**：
+- `git remote -v` 现在应显示 `origin` 为 `git@github.com:jiang1174526385-afk/PA_Agent.git`（不再是 `rosemarycox5334-debug`）。
+- 后续新提交会自动沿用本仓库已设置的 `jiang1174526385-afk` 身份，无需重新配置。
+- `main` 分支本地与远程已同步（`3acff71`），阶段二 session 开始时的 `git status --short` 预期应为空（除非用户在两次 session 之间又做了其它本地改动）。

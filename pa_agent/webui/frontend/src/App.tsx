@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { ChartView } from "./chart/ChartView";
 import { DecisionPanel } from "./decision/DecisionPanel";
 import { FutureTrendPanel } from "./decision/FutureTrendPanel";
+import { DecisionTreePanel } from "./decisionTree/DecisionTreePanel";
 import { fetchDataSources, fetchKlineSnapshot, fetchSymbols, fetchTimeframes } from "./api/paAgentApi";
 import { useAnalysisSocket, useKlineSocket, type KlineSubscribeParams } from "./api/paAgentWs";
 import { SettingsModal } from "./settings/SettingsModal";
@@ -137,6 +138,7 @@ export function App() {
           )}
           <DecisionPanel decision={decision} />
           <FutureTrendPanel decision={decision} />
+          <DecisionTreePanel record={state.record} />
         </div>
       </div>
 

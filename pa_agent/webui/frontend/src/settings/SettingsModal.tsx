@@ -1,16 +1,18 @@
 import { useState } from "react";
 import { FeishuTab } from "./FeishuTab";
 import { GeneralTab } from "./GeneralTab";
+import { OKXTab } from "./OKXTab";
 import { ProviderTab } from "./ProviderTab";
 import { PushPlusTab } from "./PushPlusTab";
 
-type TabKey = "provider" | "general" | "feishu" | "pushplus";
+type TabKey = "provider" | "general" | "feishu" | "pushplus" | "okx";
 
 const TABS: { key: TabKey; label: string }[] = [
   { key: "provider", label: "AI 模型" },
   { key: "general", label: "通用" },
   { key: "feishu", label: "飞书" },
   { key: "pushplus", label: "PushPlus" },
+  { key: "okx", label: "OKX" },
 ];
 
 export function SettingsModal({ onClose }: { onClose: () => void }) {
@@ -39,6 +41,7 @@ export function SettingsModal({ onClose }: { onClose: () => void }) {
           {tab === "general" && <GeneralTab />}
           {tab === "feishu" && <FeishuTab />}
           {tab === "pushplus" && <PushPlusTab />}
+          {tab === "okx" && <OKXTab />}
         </div>
       </div>
     </div>

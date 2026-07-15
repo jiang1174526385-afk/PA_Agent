@@ -12,14 +12,17 @@ from pa_agent.config.settings import load_settings, save_settings
 from pa_agent.webui.schemas.settings import (
     FeishuWrite,
     GeneralWrite,
+    OKXWrite,
     ProviderWrite,
     PushPlusWrite,
     apply_feishu_write,
     apply_general_write,
+    apply_okx_write,
     apply_provider_write,
     apply_pushplus_write,
     feishu_to_read,
     general_to_read,
+    okx_to_read,
     provider_to_read,
     pushplus_to_read,
 )
@@ -31,6 +34,7 @@ _READERS = {
     "general": lambda s: general_to_read(s.general),
     "feishu": lambda s: feishu_to_read(s.feishu),
     "pushplus": lambda s: pushplus_to_read(s.pushplus),
+    "okx": lambda s: okx_to_read(s.okx),
 }
 
 _WRITE_MODELS = {
@@ -38,6 +42,7 @@ _WRITE_MODELS = {
     "general": GeneralWrite,
     "feishu": FeishuWrite,
     "pushplus": PushPlusWrite,
+    "okx": OKXWrite,
 }
 
 _APPLIERS = {
@@ -45,6 +50,7 @@ _APPLIERS = {
     "general": apply_general_write,
     "feishu": apply_feishu_write,
     "pushplus": apply_pushplus_write,
+    "okx": apply_okx_write,
 }
 
 

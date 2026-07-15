@@ -25,8 +25,8 @@
 
 ## 3. 前置条件
 
-1. 依次读取 `README.md`、本文件、`phase-1-completion-report.md`。
-2. `git status --short`，确认阶段一的改动已按用户要求处理（提交或保留在工作区），不得回滚。
+1. 依次读取 `README.md`、本文件、`phase-1-completion-report.md`（含其 §10 附录：阶段一验收后补做的 Git 仓库迁移记录）。
+2. `git status --short`，确认阶段一的改动已按用户要求处理（提交或保留在工作区），不得回滚。阶段一结束时代码已提交至 `main`（`8bd6473`/`3acff71`）并推送到 `origin` = `git@github.com:jiang1174526385-afk/PA_Agent.git`（**不再是**旧的 `rosemarycox5334-debug/PA_Agent.git`），本仓库本地 git 身份已设置为 `jiang1174526385-afk <jiang1174526385-afk@users.noreply.github.com>`，新提交无需重新配置身份；若 `git remote -v` 显示的不是这个地址，说明环境有变化，需要向用户确认而不是假设。
 3. 重新打开 `pa_agent/qunyou/AD48DF6289CB6A9D51FE0B8EE2EC38C2.jpg` 核对模块细节（本执行方案编写时已打开一次，见 §3.3 的模块清单，但实施 session 开始时仍需按协议重新打开核对，不能只读本文字描述）。
 4. 通读 `pa_agent/records/trade_logger.py` 全文（尤其 `_CSV_FIELDNAMES`、`_render_chart`、写入函数的调用时机），确认 CSV 现有字段（本方案 §4.1 已逐列列出，但实施时仍需核对是否有偏差）。
 5. 通读 `pa_agent/data/mt5.py`、`pa_agent/data/okx_source.py` 全文，确认现有 `connect()`/`disconnect()` 生命周期，新增的历史成交查询函数应放在哪个模块（建议新建 `pa_agent/data/trade_history.py`，见 §5.2，不in-place 塞进 `mt5.py`/`okx_source.py` 避免职责混杂，除非发现更好的位置需要说明理由）。

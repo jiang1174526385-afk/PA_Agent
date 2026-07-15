@@ -4,6 +4,7 @@ import type {
   FeishuRead,
   GeneralRead,
   KlineFrame,
+  OKXRead,
   ProviderRead,
   PushPlusRead,
   SectionName,
@@ -42,6 +43,7 @@ type SectionReadMap = {
   general: GeneralRead;
   feishu: FeishuRead;
   pushplus: PushPlusRead;
+  okx: OKXRead;
 };
 
 export function fetchSettingsSection<S extends SectionName>(

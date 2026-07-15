@@ -99,6 +99,37 @@ def test_feishu_and_pushplus_secrets_masked(client):
     assert pushplus_body["token_set"] is True
 
 
+def test_okx_secrets_masked_and_roundtrip(client):
+    c, settings_path = client
+    resp = c.get("/api/settings/okx")
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["api_key_set"] is False
+
+    resp = c.put(
+        "/api/settings/okx",
+        json={"api_key": "okx-key-value", "api_secret": "okx-secret-value", "passphrase": "okx-pass-value"},
+    )
+    assert resp.status_code == 200
+    body = resp.json()
+    assert "okx-key-value" not in json.dumps(body)
+    assert "okx-secret-value" not in json.dumps(body)
+    assert body["api_key_set"] is True
+    assert body["api_secret_set"] is True
+    assert body["passphrase_set"] is True
+
+    from pa_agent.config.settings import load_settings as _load
+
+    reloaded = _load(settings_path)
+    assert reloaded.okx.api_key == "okx-key-value"
+
+    # PUT with null leaves existing values unchanged
+    resp2 = c.put("/api/settings/okx", json={"api_key": None})
+    assert resp2.status_code == 200
+    reloaded2 = _load(settings_path)
+    assert reloaded2.okx.api_key == "okx-key-value"
+
+
 def test_unknown_section_404(client):
     c, _ = client
     assert c.get("/api/settings/nope").status_code == 404

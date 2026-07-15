@@ -1,0 +1,266 @@
+/* Phase 2 "trade record analysis report" — light card-dashboard theme.
+   Independent from ../styles/tokens.css by design (see docs/webui_migration/
+   README.md §2.1): distinct custom-property names so nothing is inherited
+   from the phase-1 dark workbench theme, even accidentally via cascade. */
+
+.reports-shell {
+  --report-bg: #f4f6fb;
+  --report-surface: #ffffff;
+  --report-border: #e6e9f2;
+  --report-fg: #1f2937;
+  --report-fg-muted: #6b7280;
+  --report-accent: #6d5bd0;
+  --report-accent-soft: #efeaff;
+  --report-green: #16a34a;
+  --report-red: #dc2626;
+  --report-amber: #d97706;
+  --report-radius: 12px;
+  --report-shadow: 0 1px 2px rgba(16, 24, 40, 0.04), 0 1px 3px rgba(16, 24, 40, 0.06);
+  --report-font: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+
+  background: var(--report-bg);
+  color: var(--report-fg);
+  font-family: var(--report-font);
+  min-height: 100vh;
+  display: flex;
+}
+
+.reports-shell * {
+  box-sizing: border-box;
+}
+
+.reports-sidenav {
+  width: 76px;
+  flex-shrink: 0;
+  background: var(--report-surface);
+  border-right: 1px solid var(--report-border);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 20px 0;
+  gap: 4px;
+}
+
+.reports-sidenav-item {
+  width: 56px;
+  padding: 10px 4px;
+  border-radius: var(--report-radius);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  color: var(--report-fg-muted);
+  cursor: pointer;
+  border: none;
+  background: none;
+}
+
+.reports-sidenav-item.active {
+  background: var(--report-accent-soft);
+  color: var(--report-accent);
+}
+
+.reports-sidenav-icon {
+  font-size: 18px;
+}
+
+.reports-sidenav-account {
+  margin-top: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  color: var(--report-fg-muted);
+  padding-top: 16px;
+}
+
+.reports-sidenav-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--report-accent-soft);
+  color: var(--report-accent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+}
+
+.reports-main {
+  flex: 1;
+  min-width: 0;
+  padding: 20px 28px 40px;
+  overflow-y: auto;
+}
+
+.reports-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.reports-title-block h1 {
+  font-size: 20px;
+  margin: 0 0 4px;
+}
+
+.reports-breadcrumb {
+  font-size: 12px;
+  color: var(--report-fg-muted);
+}
+
+.reports-filters {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.reports-filters select,
+.reports-filters input {
+  background: var(--report-surface);
+  border: 1px solid var(--report-border);
+  border-radius: 8px;
+  padding: 6px 10px;
+  font-size: 13px;
+  color: var(--report-fg);
+}
+
+.reports-manage-btn {
+  background: var(--report-accent);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 8px 16px;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.reports-kpi-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.reports-kpi-card {
+  background: var(--report-surface);
+  border-radius: var(--report-radius);
+  box-shadow: var(--report-shadow);
+  padding: 14px 16px;
+}
+
+.reports-kpi-label {
+  font-size: 12px;
+  color: var(--report-fg-muted);
+  margin-bottom: 6px;
+}
+
+.reports-kpi-value {
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.reports-kpi-sub {
+  font-size: 11px;
+  color: var(--report-fg-muted);
+  margin-top: 4px;
+}
+
+.reports-chart-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.reports-chart-grid.wide-first > *:first-child {
+  grid-column: span 1;
+}
+
+.reports-card {
+  background: var(--report-surface);
+  border-radius: var(--report-radius);
+  box-shadow: var(--report-shadow);
+  padding: 14px 16px;
+  min-width: 0;
+}
+
+.reports-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.reports-placeholder-page {
+  padding: 60px;
+  text-align: center;
+  color: var(--report-fg-muted);
+}
+
+.reports-order-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.reports-order-table th {
+  text-align: left;
+  color: var(--report-fg-muted);
+  font-weight: 500;
+  padding: 8px;
+  border-bottom: 1px solid var(--report-border);
+  cursor: pointer;
+}
+
+.reports-order-table td {
+  padding: 8px;
+  border-bottom: 1px solid var(--report-border);
+}
+
+.reports-order-table .pnl-positive {
+  color: var(--report-green);
+}
+
+.reports-order-table .pnl-negative {
+  color: var(--report-red);
+}
+
+.reports-order-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 10px;
+  flex-wrap: wrap;
+}
+
+.reports-pagination {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  justify-content: flex-end;
+  margin-top: 10px;
+  font-size: 12px;
+  color: var(--report-fg-muted);
+}
+
+.reports-pagination button {
+  background: var(--report-surface);
+  border: 1px solid var(--report-border);
+  border-radius: 6px;
+  padding: 4px 10px;
+  cursor: pointer;
+}
+
+.reports-pagination button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
