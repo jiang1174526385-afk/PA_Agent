@@ -84,3 +84,9 @@ docs/changelog/
 Thumbs.db
 Desktop.ini
 .DS_Store
+
+# ── Web UI 前端（Node 依赖与构建产物，源码仍入库）────────────────────────────
+pa_agent/webui/frontend/node_modules/
+pa_agent/webui/frontend/dist/
+pa_agent/webui/static/pa_agent_app/*
+!pa_agent/webui/static/pa_agent_app/.gitkeep

@@ -1,0 +1,232 @@
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font-ui);
+}
+
+button {
+  font-family: inherit;
+}
+
+.app-shell {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing);
+  padding: var(--spacing) calc(var(--spacing) * 2);
+  background: var(--surface-1);
+  border-bottom: 1px solid var(--border);
+}
+
+.toolbar select,
+.toolbar button {
+  background: var(--surface-2);
+  color: var(--fg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 4px 10px;
+  font-size: 13px;
+}
+
+.toolbar button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.toolbar .spacer {
+  flex: 1;
+}
+
+.toolbar .status-pill {
+  border-radius: 999px;
+  padding: 2px 10px;
+  font-size: 12px;
+  border: 1px solid var(--border);
+  color: var(--fg-2);
+}
+
+.toolbar .status-pill.connected {
+  color: var(--pill-green-text);
+  border-color: var(--pill-green-border);
+  background: var(--pill-green-bg);
+}
+
+.toolbar .status-pill.disconnected {
+  color: var(--pill-red-text);
+  border-color: var(--pill-red-border);
+  background: var(--pill-red-bg);
+}
+
+.main-layout {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  min-height: 0;
+}
+
+.chart-pane {
+  min-width: 0;
+  min-height: 0;
+  border-right: 1px solid var(--border);
+}
+
+.side-pane {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.panel {
+  background: var(--surface-1);
+  border-bottom: 1px solid var(--border);
+  padding: calc(var(--spacing) * 1.5);
+}
+
+.panel h3 {
+  margin: 0 0 var(--spacing) 0;
+  font-size: 13px;
+  color: var(--fg-2);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.chip-row {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: var(--spacing);
+}
+
+.chip {
+  border-radius: 999px;
+  padding: 2px 10px;
+  font-size: 12px;
+  border: 1px solid var(--border);
+  color: var(--fg-2);
+  background: var(--surface-2);
+}
+
+.price-row {
+  display: flex;
+  gap: calc(var(--spacing) * 2);
+  margin: var(--spacing) 0;
+  font-size: 13px;
+  font-family: var(--font-mono);
+}
+
+.reasoning-box {
+  white-space: pre-wrap;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--fg);
+  background: var(--surface-2);
+  border-radius: var(--radius);
+  padding: var(--spacing);
+  max-height: 240px;
+  overflow-y: auto;
+}
+
+.placeholder {
+  color: var(--fg-3);
+  font-size: 13px;
+}
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+}
+
+.modal {
+  background: var(--surface-1);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  width: 520px;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--spacing) calc(var(--spacing) * 2);
+  border-bottom: 1px solid var(--border);
+}
+
+.modal-tabs {
+  display: flex;
+  gap: 4px;
+  padding: var(--spacing) calc(var(--spacing) * 2) 0;
+}
+
+.modal-tabs button {
+  background: transparent;
+  border: none;
+  color: var(--fg-2);
+  padding: 6px 12px;
+  border-radius: var(--radius) var(--radius) 0 0;
+  cursor: pointer;
+}
+
+.modal-tabs button.active {
+  color: var(--fg);
+  background: var(--surface-2);
+}
+
+.modal-body {
+  padding: calc(var(--spacing) * 2);
+  overflow-y: auto;
+}
+
+.form-row {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: var(--spacing);
+}
+
+.form-row label {
+  font-size: 12px;
+  color: var(--fg-2);
+}
+
+.form-row input,
+.form-row select {
+  background: var(--surface-2);
+  color: var(--fg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 6px 8px;
+  font-size: 13px;
+}
+
+.modal-footer {
+  padding: var(--spacing) calc(var(--spacing) * 2);
+  border-top: 1px solid var(--border);
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--spacing);
+}
