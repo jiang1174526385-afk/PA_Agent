@@ -3,6 +3,7 @@ import { ChartView } from "./chart/ChartView";
 import { DecisionPanel } from "./decision/DecisionPanel";
 import { FutureTrendPanel } from "./decision/FutureTrendPanel";
 import { DecisionTreePanel } from "./decisionTree/DecisionTreePanel";
+import { DecisionFlowPanel } from "./decisionFlow/DecisionFlowPanel";
 import { fetchDataSources, fetchKlineSnapshot, fetchSymbols, fetchTimeframes } from "./api/paAgentApi";
 import { useAnalysisSocket, useKlineSocket, type KlineSubscribeParams } from "./api/paAgentWs";
 import { SettingsModal } from "./settings/SettingsModal";
@@ -140,6 +141,10 @@ export function App() {
           <FutureTrendPanel decision={decision} />
           <DecisionTreePanel record={state.record} />
         </div>
+      </div>
+
+      <div className="flow-row">
+        <DecisionFlowPanel record={state.record} />
       </div>
 
       {settingsOpen && <SettingsModal onClose={() => setSettingsOpen(false)} />}

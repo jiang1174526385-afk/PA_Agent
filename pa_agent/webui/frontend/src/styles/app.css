@@ -311,3 +311,275 @@ button {
   color: var(--fg-2);
   padding: 4px 0;
 }
+
+/* Phase 4: DecisionFlowViz animated flowchart (react-flow) */
+
+.flow-row {
+  height: 480px;
+  border-top: 1px solid var(--border);
+  min-height: 0;
+}
+
+.decision-flow-panel {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: var(--surface-1);
+  padding: calc(var(--spacing) * 1.5);
+}
+
+.decision-flow-panel.fullscreen {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  height: 100vh;
+}
+
+.decision-flow-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing);
+}
+
+.decision-flow-header h3 {
+  margin: 0;
+  font-size: 13px;
+  color: var(--fg-2);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.decision-flow-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.decision-flow-header-actions button {
+  background: var(--surface-2);
+  color: var(--accent-3);
+  border: 1px solid var(--accent-3);
+  border-radius: var(--radius);
+  padding: 4px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.decision-flow-header-actions button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.decision-flow-play-status {
+  color: var(--accent);
+  font-size: 12px;
+}
+
+.decision-flow-sub {
+  color: var(--fg-2);
+  font-size: 12px;
+  line-height: 1.4;
+  margin: 6px 0;
+}
+
+.decision-flow-canvas {
+  flex: 1;
+  min-height: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  background: #05070b;
+}
+
+.decision-flow-canvas .react-flow__attribution {
+  display: none;
+}
+
+.decision-flow-canvas .react-flow__controls-button {
+  background: var(--surface-2);
+  border-bottom: 1px solid var(--border);
+  fill: var(--fg);
+}
+
+/* Node cards -- CSS-only equivalents of the desktop QPainter cards, colored
+   via the per-node "--flow-accent" custom property set inline (see nodes.tsx). */
+
+.flow-decision-node {
+  --flow-accent: var(--accent-3);
+  position: relative;
+  width: 320px;
+  padding: 10px 14px 10px 18px;
+  border-radius: 12px;
+  border: 1.5px solid var(--flow-accent);
+  background: linear-gradient(180deg, #172943 0%, #0b0f18 55%, #030711 100%);
+  box-shadow: 0 0 14px color-mix(in srgb, var(--flow-accent) 30%, transparent);
+  color: var(--fg);
+  font-size: 12px;
+  transition: box-shadow 0.2s ease;
+}
+
+.flow-decision-node:hover {
+  box-shadow: 0 0 20px color-mix(in srgb, var(--flow-accent) 60%, transparent);
+}
+
+.flow-decision-node.skipped {
+  opacity: 0.75;
+}
+
+.flow-node-stripe {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 5px;
+  border-radius: 12px 0 0 12px;
+  background: var(--flow-accent);
+}
+
+.flow-node-override-badge {
+  position: absolute;
+  top: 8px;
+  right: 10px;
+  background: #ffcf33;
+  color: #000;
+  font-size: 10px;
+  font-weight: 700;
+  border-radius: 4px;
+  padding: 2px 6px;
+}
+
+.flow-node-header {
+  display: flex;
+  justify-content: space-between;
+  color: var(--fg-2);
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.flow-node-id {
+  color: var(--accent-3);
+  font-family: var(--font-mono);
+}
+
+.flow-node-meta {
+  color: var(--fg-2);
+  font-size: 11px;
+  margin-bottom: 6px;
+}
+
+.flow-node-question {
+  color: var(--fg);
+  font-weight: 600;
+  font-size: 13px;
+  line-height: 1.35;
+  max-height: 54px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-bottom: 8px;
+}
+
+.flow-node-footer {
+  color: var(--flow-accent);
+  background: color-mix(in srgb, var(--flow-accent) 18%, transparent);
+  border-radius: 8px;
+  padding: 4px 8px;
+  font-weight: 700;
+  font-size: 12px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.flow-alt-node {
+  --flow-accent: var(--success);
+  width: 220px;
+  padding: 8px 12px;
+  border-radius: 10px;
+  border: 1.5px dashed color-mix(in srgb, var(--flow-accent) 65%, transparent);
+  background: rgba(13, 18, 29, 0.92);
+  font-size: 11px;
+}
+
+.flow-alt-title {
+  color: var(--flow-accent);
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+
+.flow-alt-outcome {
+  color: var(--fg-2);
+  line-height: 1.35;
+  max-height: 40px;
+  overflow: hidden;
+}
+
+.flow-terminal-node {
+  --flow-accent: var(--accent-3);
+  width: 300px;
+  padding: 10px 16px;
+  border-radius: 14px;
+  border: 2px solid var(--flow-accent);
+  background: linear-gradient(90deg, #07111f 0%, #1a2844 50%, #07111f 100%);
+  text-align: center;
+  animation: flow-terminal-pulse 2.4s ease-in-out infinite;
+}
+
+.flow-terminal-header {
+  color: var(--fg-3);
+  font-size: 10px;
+  font-family: var(--font-mono);
+  font-weight: 700;
+  letter-spacing: 0.05em;
+}
+
+.flow-terminal-outcome {
+  color: var(--flow-accent);
+  font-size: 18px;
+  font-weight: 800;
+  margin: 4px 0;
+}
+
+.flow-terminal-label {
+  color: var(--fg);
+  font-size: 12px;
+  line-height: 1.3;
+  max-height: 36px;
+  overflow: hidden;
+}
+
+@keyframes flow-terminal-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 10px color-mix(in srgb, var(--flow-accent) 35%, transparent);
+  }
+  50% {
+    box-shadow: 0 0 26px color-mix(in srgb, var(--flow-accent) 70%, transparent);
+  }
+}
+
+.flow-band-node {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 560px;
+  color: var(--accent);
+  pointer-events: none;
+}
+
+.flow-band-line {
+  flex: 1;
+  height: 1px;
+  background: var(--accent);
+  opacity: 0.5;
+}
+
+.flow-band-title {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 4px 12px;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--accent) 15%, transparent);
+  white-space: nowrap;
+}

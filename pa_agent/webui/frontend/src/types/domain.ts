@@ -161,6 +161,49 @@ export interface DecisionTreeReplayResponse {
   gate_hint: string;
 }
 
+// -- Phase 4: DecisionFlowViz (branched animated flowchart) ------------------
+
+export interface DecisionFlowAlt {
+  branch: "yes" | "no";
+  title: string;
+  outcome: string;
+}
+
+export interface DecisionFlowStep {
+  step: number;
+  phase: string;
+  phase_zh: string;
+  node_id: string;
+  section: string;
+  bar_range: string;
+  question: string;
+  answer: string;
+  answer_color_key: "success" | "danger" | "warning" | "muted" | "secondary";
+  skipped: boolean;
+  side: "left" | "right" | "down";
+  overridden: boolean;
+  program_answer: string;
+  program_branch: string;
+  override_reason: string;
+  band_before: boolean;
+  alt: DecisionFlowAlt | null;
+}
+
+export interface DecisionFlowTerminal {
+  node_id: string;
+  outcome: string;
+  outcome_zh: string;
+  label: string;
+  color_key: "success" | "warning" | "danger" | "muted" | "secondary";
+}
+
+export interface DecisionFlowResponse {
+  steps: DecisionFlowStep[];
+  terminal: DecisionFlowTerminal | null;
+  gate_shortcircuited: boolean;
+  has_path: boolean;
+}
+
 export interface Stage1Diagnosis {
   gate_trace?: DecisionTraceItem[];
   gate_result?: "proceed" | "wait" | "unknown";

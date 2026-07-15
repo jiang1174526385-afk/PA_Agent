@@ -108,3 +108,97 @@ def test_replay_empty_traces_returns_no_terminal_info():
     assert body["visited_ids"] == []
     assert body["terminal_banner"]["color_key"] == "muted"
     assert body["gate_hint"] == ""
+
+
+def test_flow_left_right_down_branch_sides_and_alt_outcomes():
+    gate_trace = [
+        {
+            "node_id": "1.1",
+            "question": "问题1（基于K10-K1判断）",
+            "answer": "否",
+            "reason": "理由1",
+            "bar_range": "K10-K1",
+            "section": "阶段一",
+        },
+        {
+            "node_id": "1.2",
+            "question": "问题2",
+            "answer": "是",
+            "reason": "理由2",
+            "bar_range": "K5-K1",
+        },
+        {
+            "node_id": "1.3",
+            "question": "问题3",
+            "answer": "不适用",
+            "skipped": True,
+        },
+    ]
+    decision_trace = [
+        {
+            "node_id": "9.0",
+            "question": "问题4",
+            "answer": "是",
+            "branch": "no",
+            "overridden_by_ai": True,
+            "program_answer": "否",
+            "program_branch": "no",
+            "override_reason": "AI override reason",
+        },
+    ]
+    terminal = {"node_id": "9.0", "outcome": "trade", "label": "做多"}
+
+    resp = _client().post(
+        "/api/decision-tree/flow",
+        json={
+            "gate_trace": gate_trace,
+            "decision_trace": decision_trace,
+            "terminal": terminal,
+            "gate_result": "proceed",
+            "gate_shortcircuited": False,
+        },
+    )
+    assert resp.status_code == 200
+    body = resp.json()
+
+    steps = body["steps"]
+    assert [s["node_id"] for s in steps] == ["1.1", "1.2", "1.3", "9.0"]
+
+    # 否 -> left, alt shows the untaken 是 outcome
+    assert steps[0]["side"] == "left"
+    assert steps[0]["alt"]["branch"] == "yes"
+    assert steps[0]["alt"]["title"] == "是"
+
+    # 是 -> right, alt shows the untaken 否 outcome
+    assert steps[1]["side"] == "right"
+    assert steps[1]["alt"]["branch"] == "no"
+    assert steps[1]["alt"]["title"] == "否"
+
+    # skipped -> down, no alt stub
+    assert steps[2]["side"] == "down"
+    assert steps[2]["alt"] is None
+
+    # phase transition gate(1.3) -> decision(9.0) inserts a band before this step
+    assert steps[3]["phase"] == "decision"
+    assert steps[3]["band_before"] is True
+    assert steps[0]["band_before"] is False
+
+    # AI override fields pass through
+    assert steps[3]["overridden"] is True
+    assert steps[3]["program_answer"] == "否"
+    assert steps[3]["override_reason"] == "AI override reason"
+
+    assert body["terminal"]["node_id"] == "9.0"
+    assert body["terminal"]["outcome"] == "trade"
+    assert body["terminal"]["outcome_zh"] == "交易"
+    assert body["terminal"]["color_key"] == "success"
+    assert body["has_path"] is True
+
+
+def test_flow_empty_traces_returns_no_path():
+    resp = _client().post("/api/decision-tree/flow", json={})
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["steps"] == []
+    assert body["terminal"] is None
+    assert body["has_path"] is False

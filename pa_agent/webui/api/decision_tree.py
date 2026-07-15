@@ -13,14 +13,20 @@ from __future__ import annotations
 from fastapi import APIRouter
 
 from pa_agent.ai.decision_tree import (
+    _BRANCH_DISPLAY_ZH,
     format_bar_basis_suffix,
     format_trace_answer,
+    get_node_branch_outcome,
     load_decision_tree,
     merge_traces,
     normalize_bar_range,
     plain_trace_question,
 )
 from pa_agent.webui.schemas.decision_tree import (
+    DecisionFlowAlt,
+    DecisionFlowResponse,
+    DecisionFlowStep,
+    DecisionFlowTerminal,
     DecisionTreeReplayRequest,
     DecisionTreeReplayResponse,
     DecisionTreeReplayRow,
@@ -39,10 +45,25 @@ _ANSWER_COLOR_KEY = {
     "等待": "warning",
     "不适用": "muted",
 }
+_OUTCOME_COLOR_KEY = {"wait": "warning", "reject": "danger", "trade": "success", "proceed": "secondary"}
 
 
 def _answer_color_key(answer: str) -> str:
     return _ANSWER_COLOR_KEY.get(answer, "secondary")
+
+
+def _taken_branch_side(item: dict) -> str:
+    """Mirrors `pa_agent/gui/decision_flow_viz.py::_taken_branch_side` -- which
+    branch the AI took: left=否, right=是/等待/中性, down=跳过/其它."""
+    if item.get("skipped"):
+        return "down"
+    ans = format_trace_answer(item) or str(item.get("answer", ""))
+    base = ans.split("（", 1)[0]
+    if base == "否":
+        return "left"
+    if base in ("是", "等待", "中性"):
+        return "right"
+    return "down"
 
 
 @router.get("/decision-tree/static")
@@ -141,4 +162,80 @@ async def replay(req: DecisionTreeReplayRequest) -> DecisionTreeReplayResponse:
 
     return DecisionTreeReplayResponse(
         rows=rows, visited_ids=visited_ids, terminal_banner=banner, gate_hint=gate_hint
+    )
+
+
+@router.post("/decision-tree/flow")
+async def flow(req: DecisionTreeReplayRequest) -> DecisionFlowResponse:
+    """Format one analysis run's trace into the node/branch-side model consumed
+    by the phase-4 animated flowchart (`src/decisionFlow/`) -- mirrors
+    `pa_agent/gui/decision_flow_viz.py::_layout_branched_path`'s per-node data
+    (geometry itself is computed client-side, see `decisionFlow/layout.ts`)."""
+    merged = merge_traces(req.gate_trace, req.decision_trace)
+
+    steps: list[DecisionFlowStep] = []
+    last_phase: str | None = None
+    for idx, item in enumerate(merged):
+        phase = str(item.get("phase", ""))
+        band_before = last_phase == "gate" and phase == "decision"
+        last_phase = phase
+
+        node_id = str(item.get("node_id", "?"))
+        answer = format_trace_answer(item) or str(item.get("answer", "—"))
+        branch = item.get("branch")
+        if branch:
+            bzh = _BRANCH_DISPLAY_ZH.get(str(branch), str(branch))
+            if bzh and bzh not in answer:
+                answer = f"{answer} · {bzh}"
+        base_ans = str(item.get("answer", "") or "").split("（", 1)[0]
+        side = _taken_branch_side(item)
+
+        alt: DecisionFlowAlt | None = None
+        if side != "down":
+            alt_branch = "yes" if side == "left" else "no"
+            outcome = get_node_branch_outcome(node_id, alt_branch)
+            alt = DecisionFlowAlt(
+                branch=alt_branch,
+                title="是" if alt_branch == "yes" else "否",
+                outcome=outcome or ("继续" if alt_branch == "yes" else "等待"),
+            )
+
+        steps.append(
+            DecisionFlowStep(
+                step=idx + 1,
+                phase=phase,
+                phase_zh=_PHASE_ZH.get(phase, phase),
+                node_id=node_id,
+                section=str(item.get("section", "") or ""),
+                bar_range=str(item.get("bar_range", "") or ""),
+                question=plain_trace_question(item),
+                answer=answer,
+                answer_color_key=_answer_color_key(base_ans),
+                skipped=bool(item.get("skipped")),
+                side=side,
+                overridden=bool(item.get("overridden_by_ai")),
+                program_answer=str(item.get("program_answer", "") or ""),
+                program_branch=str(item.get("program_branch", "") or ""),
+                override_reason=str(item.get("override_reason", "") or ""),
+                band_before=band_before,
+                alt=alt,
+            )
+        )
+
+    terminal_out: DecisionFlowTerminal | None = None
+    if req.terminal:
+        outcome = str(req.terminal.get("outcome", ""))
+        terminal_out = DecisionFlowTerminal(
+            node_id=str(req.terminal.get("node_id", "?")),
+            outcome=outcome,
+            outcome_zh=_OUTCOME_ZH.get(outcome, outcome),
+            label=str(req.terminal.get("label", "") or ""),
+            color_key=_OUTCOME_COLOR_KEY.get(outcome, "secondary"),
+        )
+
+    return DecisionFlowResponse(
+        steps=steps,
+        terminal=terminal_out,
+        gate_shortcircuited=req.gate_shortcircuited,
+        has_path=bool(steps) or terminal_out is not None,
     )

@@ -10,6 +10,7 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@xyflow/react": "^12.11.2",
     "clsx": "^2.1.1",
     "lightweight-charts": "^5.2.0",
     "marked": "^14.1.2",
