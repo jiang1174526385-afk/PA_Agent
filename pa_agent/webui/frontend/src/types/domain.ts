@@ -251,13 +251,30 @@ export type AnalysisWsInbound =
   | { type: "stage_prompt"; stage: string; system: string; user: string }
   | { type: "stage2_files"; files: string[] }
   | { type: "record"; record: AnalysisRecord }
-  | { type: "error"; message: string };
+  | { type: "error"; message: string }
+  // -- Phase 6: demo replay + order-opportunity alert ------------------------
+  | { type: "demo_finished" }
+  | { type: "order_opportunity"; message: string };
 
 export interface AnalysisWsSubmit {
   type: "submit";
-  mode: "full" | "incremental";
+  mode: "full" | "incremental" | "demo";
   n_bars?: number;
   incremental_new_bar_count?: number;
+  demo_record_id?: string;
+}
+
+// -- Phase 6: demo-record picker (GET /api/demo/records) ----------------------
+
+export interface DemoRecordSummary {
+  record_id: string;
+  symbol: string;
+  timeframe: string;
+  timestamp_local_iso: string;
+}
+
+export interface DemoRecordListResponse {
+  records: DemoRecordSummary[];
 }
 
 export type AnalysisWsCancel = { type: "cancel" };

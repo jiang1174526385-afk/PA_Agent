@@ -1,4 +1,5 @@
-import type { DataSourceChoice } from "../types/domain";
+import { formatDemoRecordLabel } from "../demo/demoFormat";
+import type { DataSourceChoice, DemoRecordSummary } from "../types/domain";
 
 export interface ToolbarProps {
   dataSources: DataSourceChoice[];
@@ -21,7 +22,15 @@ export interface ToolbarProps {
   onSubmitIncremental: () => void;
   onCancelAnalysis: () => void;
   onOpenSettings: () => void;
+  // -- Phase 6: demo replay ---------------------------------------------------
+  demoRecords: DemoRecordSummary[];
+  demoRecordId: string;
+  demoRunning: boolean;
+  onDemoRecordChange: (recordId: string) => void;
+  onPlayDemo: () => void;
+  onPlayRandomDemo: () => void;
 }
+
 
 export function Toolbar(props: ToolbarProps) {
   return (
@@ -103,8 +112,38 @@ export function Toolbar(props: ToolbarProps) {
         <button onClick={props.onCancelAnalysis}>取消分析</button>
       )}
 
-      <button disabled title="阶段五开放">
-        演示模式
+      <select
+        aria-label="演示记录"
+        data-testid="demo-record-select"
+        value={props.demoRecordId}
+        onChange={(e) => props.onDemoRecordChange(e.target.value)}
+        disabled={props.demoRecords.length === 0}
+      >
+        <option value="" disabled>
+          {props.demoRecords.length === 0 ? "暂无演示记录" : "选择演示记录"}
+        </option>
+        {props.demoRecords.map((r) => (
+          <option key={r.record_id} value={r.record_id}>
+            {formatDemoRecordLabel(r)}
+          </option>
+        ))}
+      </select>
+
+      <button
+        data-testid="demo-play-button"
+        onClick={props.onPlayDemo}
+        disabled={props.analysisInProgress || !props.demoRecordId}
+      >
+        {props.demoRunning ? "演示回放中…" : "演示模式"}
+      </button>
+
+      <button
+        data-testid="demo-random-button"
+        onClick={props.onPlayRandomDemo}
+        disabled={props.analysisInProgress || props.demoRecords.length === 0}
+        title="随机播放一条演示记录"
+      >
+        随机演示
       </button>
 
       <div className="spacer" />

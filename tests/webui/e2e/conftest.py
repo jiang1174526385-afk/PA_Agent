@@ -182,6 +182,14 @@ def live_server(tmp_path, monkeypatch):
     monkeypatch.setattr("pa_agent.config.paths.SETTINGS_JSON_PATH", tmp_path / "settings.json")
     records_dir = tmp_path / "records" / "pending"
     monkeypatch.setattr("pa_agent.config.paths.RECORDS_PENDING_DIR", records_dir)
+    # Phase 6: pa_agent/demo/record_loader.py does `from pa_agent.config.paths
+    # import RECORDS_PENDING_DIR` at module import time, binding its own
+    # module-global copy of the path. Once that module is imported (the first
+    # time any test hits GET /api/demo/records or plays a demo record), the
+    # binding above no longer reaches it -- patch its copy too so each test's
+    # demo-record listing/playback is scoped to its own tmp records dir
+    # instead of leaking whichever tmp dir happened to import the module first.
+    monkeypatch.setattr("pa_agent.demo.record_loader.RECORDS_PENDING_DIR", records_dir)
 
     # Import after monkeypatching paths so a fresh `server` module state isn't required
     # (AppContext.bootstrap() re-imports paths lazily inside the classmethod body).

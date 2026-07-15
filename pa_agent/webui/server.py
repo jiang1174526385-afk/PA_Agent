@@ -23,6 +23,7 @@ from pa_agent.orchestrator.two_stage import TwoStageOrchestrator
 from pa_agent.webui.api import analysis as analysis_api
 from pa_agent.webui.api import chat as chat_api
 from pa_agent.webui.api import decision_tree as decision_tree_api
+from pa_agent.webui.api import demo as demo_api
 from pa_agent.webui.api import kline as kline_api
 from pa_agent.webui.api import models as models_api
 from pa_agent.webui.api import reports as reports_api
@@ -93,6 +94,7 @@ app.include_router(settings_api.router, prefix="/api")
 app.include_router(models_api.router, prefix="/api")
 app.include_router(reports_api.router, prefix="/api")
 app.include_router(decision_tree_api.router, prefix="/api")
+app.include_router(demo_api.router, prefix="/api")
 
 
 @app.get("/api/health")

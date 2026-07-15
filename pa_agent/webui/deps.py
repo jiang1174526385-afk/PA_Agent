@@ -12,6 +12,7 @@ from fastapi import Request
 
 from pa_agent.app_context import AppContext
 from pa_agent.webui.services.chat_runner import ChatRunner
+from pa_agent.webui.services.demo_runner import DemoRunner
 
 if TYPE_CHECKING:
     from pa_agent.data.base import KlineFrame
@@ -40,6 +41,8 @@ class AppState:
     # model (see phase-5-execution-plan.md §0.1 / §4).
     chat_session: "FreeChatSession | None" = None
     chat_runner: ChatRunner = field(default_factory=ChatRunner)
+    # -- Phase 6: demo replay -----------------------------------------------
+    demo_runner: DemoRunner = field(default_factory=DemoRunner)
 
     def next_epoch(self) -> int:
         self.epoch_counter += 1

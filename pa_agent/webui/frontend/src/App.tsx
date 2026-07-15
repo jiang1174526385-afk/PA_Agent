@@ -7,12 +7,19 @@ import { DecisionTreePanel } from "./decisionTree/DecisionTreePanel";
 import { DecisionFlowPanel } from "./decisionFlow/DecisionFlowPanel";
 import { DebugPanel } from "./debug/DebugPanel";
 import { ValidationDialog } from "./debug/ValidationDialog";
-import { fetchDataSources, fetchKlineSnapshot, fetchSymbols, fetchTimeframes } from "./api/paAgentApi";
+import {
+  fetchDataSources,
+  fetchDemoRecords,
+  fetchKlineSnapshot,
+  fetchSymbols,
+  fetchTimeframes,
+} from "./api/paAgentApi";
 import { useAnalysisSocket, useKlineSocket, type KlineSubscribeParams } from "./api/paAgentWs";
+import { OrderOpportunityToast } from "./notify/OrderOpportunityToast";
 import { SettingsModal } from "./settings/SettingsModal";
 import { useAppState } from "./state/appStore";
 import { Toolbar } from "./toolbar/Toolbar";
-import type { DataSourceChoice, KlineFrame } from "./types/domain";
+import type { DataSourceChoice, DemoRecordSummary, KlineFrame } from "./types/domain";
 
 export function App() {
   const { state, dispatch } = useAppState();
@@ -23,9 +30,14 @@ export function App() {
   const [snapshotFrame, setSnapshotFrame] = useState<KlineFrame | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [dismissedExceptionAt, setDismissedExceptionAt] = useState<number | null>(null);
+  const [demoRecords, setDemoRecords] = useState<DemoRecordSummary[]>([]);
+  const [demoRecordId, setDemoRecordId] = useState("");
+  const [demoRunning, setDemoRunning] = useState(false);
+  const [orderAlert, setOrderAlert] = useState<string | null>(null);
 
   useEffect(() => {
     fetchDataSources().then(setDataSources);
+    fetchDemoRecords().then((r) => setDemoRecords(r.records));
   }, []);
 
   useEffect(() => {
@@ -64,9 +76,18 @@ export function App() {
         break;
       case "record":
         dispatch({ type: "ANALYSIS_RECORD", record: msg.record });
+        // Refresh the demo-record picker: a real submission just wrote a new
+        // file under records/pending/ that could now be played back.
+        fetchDemoRecords().then((r) => setDemoRecords(r.records));
         break;
       case "error":
         dispatch({ type: "ANALYSIS_ERROR", message: msg.message });
+        break;
+      case "demo_finished":
+        setDemoRunning(false);
+        break;
+      case "order_opportunity":
+        setOrderAlert(msg.message);
         break;
       default:
         break;
@@ -98,6 +119,20 @@ export function App() {
   function handleSubmitFull() {
     dispatch({ type: "ANALYSIS_SUBMITTED" });
     analysis.submit({ type: "submit", mode: "full" });
+  }
+
+  function handlePlayDemo(recordId: string) {
+    if (!recordId) return;
+    setDemoRunning(true);
+    dispatch({ type: "ANALYSIS_SUBMITTED" });
+    analysis.submit({ type: "submit", mode: "demo", demo_record_id: recordId });
+  }
+
+  function handlePlayRandomDemo() {
+    if (demoRecords.length === 0) return;
+    const pick = demoRecords[Math.floor(Math.random() * demoRecords.length)];
+    setDemoRecordId(pick.record_id);
+    handlePlayDemo(pick.record_id);
   }
 
   function handleSubmitIncremental() {
@@ -134,6 +169,12 @@ export function App() {
         onSubmitIncremental={handleSubmitIncremental}
         onCancelAnalysis={() => analysis.cancel()}
         onOpenSettings={() => setSettingsOpen(true)}
+        demoRecords={demoRecords}
+        demoRecordId={demoRecordId}
+        demoRunning={demoRunning}
+        onDemoRecordChange={setDemoRecordId}
+        onPlayDemo={() => handlePlayDemo(demoRecordId)}
+        onPlayRandomDemo={handlePlayRandomDemo}
       />
 
       <div className="main-layout">
@@ -166,6 +207,9 @@ export function App() {
           record={state.record}
           onClose={() => setDismissedExceptionAt(state.record!.meta.timestamp_local_ms)}
         />
+      )}
+      {orderAlert !== null && (
+        <OrderOpportunityToast message={orderAlert} onClose={() => setOrderAlert(null)} />
       )}
     </div>
   );

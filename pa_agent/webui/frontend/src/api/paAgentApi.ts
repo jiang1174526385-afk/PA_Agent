@@ -3,6 +3,7 @@ import type {
   AnalysisRecord,
   ChatDebugContextResponse,
   DataSourceChoice,
+  DemoRecordListResponse,
   FeishuRead,
   GeneralRead,
   KlineFrame,
@@ -63,4 +64,8 @@ export function saveSettingsSection<S extends SectionName>(
 
 export function fetchChatDebugContext(record: AnalysisRecord): Promise<ChatDebugContextResponse> {
   return post<ChatDebugContextResponse>("/api/chat/debug-context", { record });
+}
+
+export function fetchDemoRecords(): Promise<DemoRecordListResponse> {
+  return get<DemoRecordListResponse>("/api/demo/records");
 }

@@ -935,3 +935,34 @@ button {
   gap: 8px;
   margin-top: 10px;
 }
+
+/* -- Phase 6: demo replay + order-opportunity toast -------------------------- */
+
+.order-opportunity-toast {
+  position: fixed;
+  top: 16px;
+  right: 16px;
+  width: 340px;
+  max-width: 90vw;
+  max-height: 60vh;
+  overflow-y: auto;
+  background: var(--surface-1);
+  border: 1px solid var(--warning, #d9a441);
+  border-radius: 8px;
+  padding: 12px 14px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+  z-index: 150;
+}
+
+.order-opportunity-toast-title {
+  font-weight: 700;
+  margin-bottom: 6px;
+}
+
+.order-opportunity-toast-body {
+  white-space: pre-wrap;
+  font-family: inherit;
+  font-size: 12px;
+  margin: 0 0 8px 0;
+  color: var(--fg-2);
+}
